@@ -1,0 +1,8 @@
+tasks:
+  run_backend:
+    name: Backend
+    init: cargo build -p server
+    command: make
+  auto_build_marketplace:
+    name: Build marketplace
+    command: make client
