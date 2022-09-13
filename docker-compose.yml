@@ -1,0 +1,21 @@
+version: '3.4'
+
+services:
+  postgres_dev:
+    container_name: 'postgres-dev'
+    image: postgres
+
+    env_file:
+      - .env
+    environment:
+      POSTGRES_PASSWORD: devpasswd
+      POSTGRES_DB: passwdmanager
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 54320
+    ports:
+      - '54320:5432'
+    volumes:
+      - postgres_data:/data/postgres
+    restart: unless-stopped
+volumes:
+  postgres_data:
