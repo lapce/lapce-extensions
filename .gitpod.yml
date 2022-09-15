@@ -6,7 +6,7 @@ tasks:
   - name: Build frontend
     init: |
       cd marketplace && pnpm install
-    command: cd marketplace && nodemon
+    command: nodemon
 image:
   file: gitpod.Dockerfile
 ports:
