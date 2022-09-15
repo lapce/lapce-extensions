@@ -33,7 +33,7 @@
             width="30"
             src={user.avatar_url}
         />
-        {user.username}
+        <span id="username">{user.username}</span>
     </div>
 {:else}
     <a class="login-button" href="/login/github"
@@ -47,6 +47,9 @@
 {/if}
 
 <style>
+    #username {
+        font-weight: bold;
+    }
     .indicator {
         display: flex;
         justify-items: center;
@@ -55,6 +58,7 @@
     .pf {
         border-radius: 50%;
         margin-right: 10px;
+        border: rgb(26, 141, 161) 2px solid;
     }
     .login-button {
         background: rgb(22, 22, 22);
