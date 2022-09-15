@@ -43,3 +43,16 @@ pub async fn get_user(session: Session<'_, String>) -> Result<Json<User>, Unauth
     
     
 }
+#[delete("/session")] 
+pub async fn logout(session: Session<'_, String>) -> Result<(), Unauthorized<Json<Error>>> {
+    if let None = session.get().await.unwrap(){
+        Err(Unauthorized(Some(Json(Error {
+            kind: ErrorKind::NotLoggedIn,
+            action: "Send a `token` cookie.".into(),
+            message: "You're already logged out".into()
+        }))))
+    } else {
+        session.remove().await.unwrap();
+        Ok(())
+    }
+}

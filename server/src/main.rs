@@ -34,7 +34,7 @@ fn rocket() -> _ {
 	};
     rocket::build()
         .mount("/", routes![github_callback, github_login])
-        .mount("/api/", routes![get_user])
+        .mount("/api/", routes![get_user, crate::user::logout])
         .attach(OAuth2::<GitHub>::fairing("github"))
         .attach(store.fairing())
         .mount("/", FileServer::from("marketplace/dist"))
