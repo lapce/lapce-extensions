@@ -18,4 +18,4 @@ vscode:
   extensions:
     - https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-linux-x64.vsix
     - serayuzgur.crates
-    - tamasfe.even-better-toml
+    - bungcip.better-toml
