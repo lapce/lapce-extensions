@@ -10,7 +10,6 @@ use dotenvy::dotenv;
 use redis::Client;
 use rocket::fs::FileServer;
 use rocket_oauth2::OAuth2;
-use rocket_session_store::memory::MemoryStore;
 use rocket_session_store::{redis::*, SessionStore, CookieConfig};
 use crate::github::*;
 use crate::user::get_user;

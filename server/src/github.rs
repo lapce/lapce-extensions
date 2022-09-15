@@ -1,4 +1,4 @@
-use rocket::http::{Cookie, CookieJar, Status};
+use rocket::http::{CookieJar, Status};
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket_oauth2::{OAuth2, TokenResponse};

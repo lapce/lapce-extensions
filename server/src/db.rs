@@ -1,7 +1,6 @@
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenvy::dotenv;
-use rocket::{response::status::Unauthorized, serde::json::Json};
 use std::env;
 
 use crate::error::{Error, ErrorKind};
