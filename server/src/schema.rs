@@ -5,6 +5,10 @@ diesel::table! {
         id -> Int4,
         user_id -> Int8,
         name -> Varchar,
+        description -> Varchar,
+        version -> Varchar,
+        display_name -> Varchar,
+        repository -> Varchar,
     }
 }
 
@@ -16,6 +20,8 @@ diesel::table! {
         avatar_url -> Varchar,
     }
 }
+
+diesel::joinable!(plugins -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     plugins,

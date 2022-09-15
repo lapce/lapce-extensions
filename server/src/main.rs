@@ -3,6 +3,7 @@ pub mod user;
 mod github;
 pub mod db;
 pub mod error;
+pub mod plugin;
 pub mod schema;
 use std::time::Duration;
 
