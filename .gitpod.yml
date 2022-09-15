@@ -6,10 +6,9 @@ tasks:
     command: make
   - name: Build frontend
     init: |
-      pnpm setup
-      pnpm install --global nodemon
-      pnpm install
-    command: nodemon
+      npm install --global nodemon
+      cd marketplace && pnpm install
+    command: cd marketplace && nodemon
 ports:
   - port: 6379
     onOpen: ignore
@@ -17,6 +16,6 @@ ports:
     onOpen: ignore
 vscode:
   extensions:
-    - https://github.com/rust-lang/rust-analyzer/releases/download/latest/rust-analyzer-linux-x64.vsix
+    - https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-linux-x64.vsix
     - serayuzgur.crates
     - tamasfe.even-better-toml
