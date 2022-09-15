@@ -5,7 +5,8 @@ use rocket::serde::{Serialize, Deserialize};
 pub enum ErrorKind {
     NotLoggedIn,
     ValidationError,
-    GithubApiError
+    GithubApiError,
+    DatabaseError(String)
 }
 #[derive(Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]

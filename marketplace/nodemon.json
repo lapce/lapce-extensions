@@ -1,0 +1,14 @@
+{
+    "watch": [
+        "node_modules",
+        "public",
+        "src",
+        "index.html",
+        "svelte.config.js",
+        "tsconfig.json",
+        "tsconfig.node.json",
+        "vite.config.ts"
+    ],
+    "ext": "*",
+    "exec": "node_modules/.bin/vite build"
+}

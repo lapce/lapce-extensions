@@ -17,5 +17,10 @@ services:
     volumes:
       - postgres_data:/data/postgres
     restart: unless-stopped
+  redis:
+    container_name: 'redis-dev'
+    image: redis
+    ports:
+      - "6379:6379"
 volumes:
   postgres_data:

@@ -1,52 +1,38 @@
-
-use octorust::Client;
-use octorust::auth::Credentials;
+use diesel::prelude::*;
 use rocket::http::CookieJar;
 use rocket::response::status::Unauthorized;
 use rocket::serde::json::Json;
 use rocket::serde::{Serialize, Deserialize};
+use rocket_session_store::Session;
+use crate::db::establish_connection;
 use crate::error::*;
-
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Queryable, Insertable, AsChangeset)]
 #[serde(crate = "rocket::serde")]
+#[diesel(table_name = crate::schema::users)]
 pub struct User {
-    name: String,
-    username: String,
-    id: i64,
-    avatar_url: String
+    pub id: i64,
+    pub name: String,
+    pub username: String,
+    pub avatar_url: String
 }
 #[get("/user")]
-pub async fn get_user(cookies: &CookieJar<'_>) -> Result<Json<User>, Unauthorized<Json<Error>>>{
-    match cookies.get_private("token") {
-        Some(token) => {
-            let github = Client::new(
-              String::from("LapceExtensions"),
-              Credentials::Token(
-                String::from(token.value())
-              ),
-            );
-            match github {
-                Ok(github) => {
-                    let users = github.users();
-                    let user = users.get_authenticated().await.unwrap();
-                    let user = user.public_user().unwrap();
-                    Ok(Json(
-                        User {
-                            id: user.id,
-                            username: user.login.clone(),
-                            avatar_url: user.avatar_url.clone(),
-                            name: user.name.clone()
-                        }
-                    ))
+pub async fn get_user(session: Session<'_, i64>) -> Result<Json<User>, Unauthorized<Json<Error>>>{
+    match session.get().await {
+        Ok(Some(user_id)) => {
+
+            use crate::schema::users::dsl::*;
+            let connection = establish_connection();
+            match connection {
+                Ok(mut connection) => {
+                    let user: User = users.find(user_id).first(&mut connection).unwrap();
+                    Ok(Json(user))
                 }
-                Err(_) => Err(Unauthorized(Some(Json(Error {
-                    kind: ErrorKind::GithubApiError,
-                    action: "Verify your token.".into(),
-                    message: "Can't connect to github api".into()
-                }))))
+                Err(err) => {
+                    Err(Unauthorized(Some(Json(err))))
+                }
             }
         }
-        None => {
+        _ => {
             Err(Unauthorized(Some(Json(Error {
                 kind: ErrorKind::NotLoggedIn,
                 action: "Send a `token` cookie.".into(),

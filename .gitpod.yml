@@ -1,6 +1,17 @@
 tasks:
   - name: Backend
-    init: cargo build -p server
+    init: |
+      cargo install diesel_cli --no-default-features -F postgres
+      cargo build -p server
     command: make
-  - name: Build marketplace
-    command: make client
+  - name: Build frontend
+    init: |
+      pnpm setup
+      pnpm install --global nodemon
+      pnpm install
+    command: nodemon
+ports:
+  - port: 6379
+    onOpen: ignore
+  - port: 54320
+    onOpen: ignore

@@ -1,2 +1,3 @@
 #!/bin/bash
-trunk watch marketplace/index.html
+cd marketplace
+nodemon
