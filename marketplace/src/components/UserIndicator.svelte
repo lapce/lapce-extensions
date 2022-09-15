@@ -12,42 +12,63 @@
     if (cookies.token) {
         fetch("/api/user")
             .then((res) => {
-                if(res.status == 200){
-                    logged_in = true;
-                    return null;
+                if (res.status == 200) {
+                    return res.json() as Promise<User>;
                 }
-                return res.json() as Promise<User>
+                return null;
             })
             .then((f_user) => {
                 user = f_user;
+                if (user) logged_in = true;
             });
     }
 </script>
 
 {#if logged_in}
-    {user.name}
+<div class="indicator">
+        <!-- svelte-ignore a11y-img-redundant-alt -->
+        <img
+            alt="profile picture"
+            class="pf"
+            width="30"
+            src={user.avatar_url}
+        />
+        {user.username}
+    </div>
 {:else}
-    <a class="login-button" href="/login/github"><img id="gh-icon" alt="github white icon" width="12" src="/GitHub-Mark-Light-64px.png"/>Login</a>
+    <a class="login-button" href="/login/github"
+        ><img
+            id="gh-icon"
+            alt="github white icon"
+            width="12"
+            src="/GitHub-Mark-Light-64px.png"
+        />Login</a
+    >
 {/if}
 
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap');
+    .indicator {
+        display: flex;
+        justify-items: center;
+        align-items: center;
+    }
+    .pf {
+        border-radius: 50%;
+        margin-right: 10px;
+    }
     .login-button {
-        background: rgb(77, 77, 77);
-        background: linear-gradient(
-            180deg,
-            rgb(77, 77, 77) 0%,
-            rgba(22, 22, 22, 1) 100%
-        );
+        background: rgb(22, 22, 22);
         padding: 10px;
         color: white;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 700;
         border-radius: 5px;
         text-decoration: none;
-
+    }
+    .login-button:hover {
+        background: rgb(17, 17, 107);
     }
     #gh-icon {
-        padding-right: 5px;
+        margin-right: 5px;
     }
 </style>
