@@ -15,3 +15,8 @@ ports:
     onOpen: ignore
   - port: 54320
     onOpen: ignore
+vscode:
+  extensions:
+    - https://github.com/rust-lang/rust-analyzer/releases/download/latest/rust-analyzer-linux-x64.vsix
+    - serayuzgur.crates
+    - tamasfe.even-better-toml
