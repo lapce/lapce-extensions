@@ -9,7 +9,7 @@ then
 else
 	docker-compose restart
 fi
-if test -f "Rocket.toml"; then
+if [ ! -f "Rocket.toml" ]; then
 	cp Rocket.toml.example Rocket.toml
 	read -p "Please configure Rocket.toml. When you're done, press [ENTER]"
 fi
