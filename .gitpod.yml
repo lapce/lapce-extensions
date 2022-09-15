@@ -1,14 +1,14 @@
 tasks:
   - name: Backend
     init: |
-      cargo install diesel_cli --no-default-features -F postgres
       cargo build -p server
     command: make
   - name: Build frontend
     init: |
-      npm install --global nodemon
       cd marketplace && pnpm install
     command: cd marketplace && nodemon
+image:
+  file: gitpod.Dockerfile
 ports:
   - port: 6379
     onOpen: ignore
