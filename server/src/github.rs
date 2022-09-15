@@ -17,7 +17,7 @@ pub fn github_login(oauth2: OAuth2<GitHub>, cookies: &CookieJar<'_>) -> Redirect
 }
 
 #[get("/auth/github")]
-pub async fn github_callback(token: TokenResponse<GitHub>, session: Session<'_, i64>) -> Result<Redirect, status::Custom<Json<Error>>>
+pub async fn github_callback(token: TokenResponse<GitHub>, session: Session<'_, String>) -> Result<Redirect, status::Custom<Json<Error>>>
 {
     let gh_token =token.access_token().to_string();
     let github = Client::new("LapceExtensions", Credentials::Token(gh_token.into()));
@@ -26,7 +26,7 @@ pub async fn github_callback(token: TokenResponse<GitHub>, session: Session<'_, 
             let users = github.users();
             let user = users.get_authenticated().await.unwrap();
             let user = user.public_user().unwrap();
-            if let Err(err) = session.set(user.id).await {
+            if let Err(err) = session.set(user.id.to_string()).await {
                 Err(status::Custom(Status::InternalServerError, Json(Error {
                     kind: ErrorKind::DatabaseError(err.to_string()),
                     action: "Try again".into(),

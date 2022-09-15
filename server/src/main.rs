@@ -10,6 +10,7 @@ use dotenvy::dotenv;
 use redis::Client;
 use rocket::fs::FileServer;
 use rocket_oauth2::OAuth2;
+use rocket_session_store::memory::MemoryStore;
 use rocket_session_store::{redis::*, SessionStore, CookieConfig};
 use crate::github::*;
 use crate::user::get_user;
@@ -18,12 +19,18 @@ fn rocket() -> _ {
     dotenv().ok();
     let client: Client = Client::open(std::env::var("REDIS_URL").unwrap_or("redis://localhost".into()))
 	    .expect("Failed to connect to redis");
-    let redis_store: RedisStore<i64> = RedisStore::new(client);
-	let store: SessionStore<i64> = SessionStore {
+    let redis_store: RedisStore<String> = RedisStore::new(client);
+	let store: SessionStore<String> = SessionStore {
 		store: Box::new(redis_store),
-		name: "token".into(),
+		name: "token".into(), 
+
 		duration: Duration::from_secs(3600 * 24 * 3),
-		cookie: CookieConfig::default(),
+		cookie: CookieConfig {
+            http_only: false,
+            secure: true,
+            path: Some("/".into()),
+            ..Default::default()
+        },
 	};
     rocket::build()
         .mount("/", routes![github_callback, github_login])

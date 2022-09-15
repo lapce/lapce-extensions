@@ -16,7 +16,7 @@ pub struct User {
     pub avatar_url: String
 }
 #[get("/user")]
-pub async fn get_user(session: Session<'_, i64>) -> Result<Json<User>, Unauthorized<Json<Error>>>{
+pub async fn get_user(session: Session<'_, String>) -> Result<Json<User>, Unauthorized<Json<Error>>>{
     match session.get().await {
         Ok(Some(user_id)) => {
 
@@ -24,7 +24,7 @@ pub async fn get_user(session: Session<'_, i64>) -> Result<Json<User>, Unauthori
             let connection = establish_connection();
             match connection {
                 Ok(mut connection) => {
-                    let user: User = users.find(user_id).first(&mut connection).unwrap();
+                    let user: User = users.find(user_id.parse::<i64>().unwrap()).first(&mut connection).unwrap();
                     Ok(Json(user))
                 }
                 Err(err) => {
