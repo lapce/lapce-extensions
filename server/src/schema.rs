@@ -4,11 +4,8 @@ diesel::table! {
     plugins (id) {
         id -> Int4,
         user_id -> Int8,
-        name -> Varchar,
-        description -> Varchar,
-        version -> Varchar,
-        display_name -> Varchar,
-        repository -> Varchar,
+        owner -> Varchar,
+        repo -> Varchar,
     }
 }
 

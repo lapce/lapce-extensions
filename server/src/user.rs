@@ -2,10 +2,10 @@ use diesel::prelude::*;
 use rocket::response::status::Unauthorized;
 use rocket::serde::json::Json;
 use rocket::serde::{Serialize, Deserialize};
-use rocket_session_store::Session;
+use crate::Session;
 use crate::db::establish_connection;
 use crate::error::*;
-#[derive(Deserialize, Serialize, Queryable, Insertable, AsChangeset)]
+#[derive(Deserialize, Serialize, Queryable, Insertable, AsChangeset, Clone)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::schema::users)]
 pub struct User {
@@ -14,16 +14,17 @@ pub struct User {
     pub username: String,
     pub avatar_url: String
 }
+
 #[get("/user")]
-pub async fn get_user(session: Session<'_, String>) -> Result<Json<User>, Unauthorized<Json<Error>>>{
+pub async fn get_user(session: Session<'_>) -> Result<Json<User>, Unauthorized<Json<Error>>>{
     match session.get().await {
-        Ok(Some(user_id)) => {
+        Ok(Some(session)) => {
 
             use crate::schema::users::dsl::*;
             let connection = establish_connection();
             match connection {
                 Ok(mut connection) => {
-                    let user: User = users.find(user_id.parse::<i64>().unwrap()).first(&mut connection).unwrap();
+                    let user: User = users.find(session.id as i64).first(&mut connection).unwrap();
                     Ok(Json(user))
                 }
                 Err(err) => {
@@ -43,7 +44,7 @@ pub async fn get_user(session: Session<'_, String>) -> Result<Json<User>, Unauth
     
 }
 #[delete("/session")] 
-pub async fn logout(session: Session<'_, String>) -> Result<(), Unauthorized<Json<Error>>> {
+pub async fn logout(session: Session<'_>) -> Result<(), Unauthorized<Json<Error>>> {
     if let None = session.get().await.unwrap(){
         Err(Unauthorized(Some(Json(Error {
             kind: ErrorKind::NotLoggedIn,

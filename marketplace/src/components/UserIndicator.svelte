@@ -9,6 +9,7 @@
     const cookies = parseCookies(document.cookie);
     let user = null;
     let logged_in = false;
+    let loading = true;
     if (cookies.token) {
         fetch("/api/user")
             .then((res) => {
@@ -20,35 +21,56 @@
             .then((f_user) => {
                 user = f_user;
                 if (user) logged_in = true;
+                loading = false;
             });
+    }
+    function logout() {
+        fetch("/api/session", {
+            method: "DELETE",
+        }).then(() => window.location.reload());
     }
 </script>
 
-{#if logged_in}
-<div class="indicator">
-        <!-- svelte-ignore a11y-img-redundant-alt -->
-        <img
-            alt="profile picture"
-            class="pf"
-            width="30"
-            src={user.avatar_url}
-        />
-        <span id="username">{user.username}</span>
-    </div>
-{:else}
-    <a class="login-button" href="/login/github"
-        ><img
-            id="gh-icon"
-            alt="github white icon"
-            width="12"
-            src="/GitHub-Mark-Light-64px.png"
-        />Login</a
-    >
+{#if !loading}
+    {#if logged_in}
+        <div class="indicator">
+            <!-- svelte-ignore a11y-img-redundant-alt -->
+            <img
+                alt="profile picture"
+                class="pf"
+                width="30"
+                src={user.avatar_url}
+            />
+            <span id="username">{user.name}</span>
+            <button id="logout" on:click={logout}>Logout</button>
+        </div>
+    {:else}
+        <a class="login-button" href="/login/github"
+            ><img
+                id="gh-icon"
+                alt="github white icon"
+                width="12"
+                src="/GitHub-Mark-Light-64px.png"
+            />Login</a
+        >
+    {/if}
 {/if}
 
 <style>
+    #logout {
+        padding: 5px 10px;
+        background-color: rgb(224, 97, 97);
+        border-radius: 3px;
+        border: 1px black solid;
+        cursor: pointer;
+    }
+    #logout:active {
+        background-color: rgb(121, 54, 54);
+        color: white;
+    }
     #username {
         font-weight: bold;
+        margin: 0px 10px;
     }
     .indicator {
         display: flex;
@@ -57,7 +79,6 @@
     }
     .pf {
         border-radius: 50%;
-        margin-right: 10px;
         border: rgb(26, 141, 161) 2px solid;
     }
     .login-button {
@@ -70,7 +91,11 @@
         text-decoration: none;
     }
     .login-button:hover {
-        background: rgb(17, 17, 107);
+        background: rgb(31, 31, 31);
+    }
+
+    .login-button:active {
+        background: rgb(0, 0, 0);
     }
     #gh-icon {
         margin-right: 5px;
