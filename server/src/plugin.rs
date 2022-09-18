@@ -1,9 +1,9 @@
 use std::{path::PathBuf};
 
-use diesel::{Insertable, Queryable, QueryDsl};
-use octorust::{Client, auth::Credentials, types::FullRepository};
+use diesel::{Insertable, Queryable};
+use octorust::{Client, auth::Credentials};
 use rocket::{tokio::{fs::File, io::{AsyncWriteExt, AsyncReadExt}}, serde::{json::Json, Deserialize, Serialize}, http::{ContentType, Status}};
-use crate::{Session, user::User, db::establish_connection, schema::plugins, error::ErrorKind};
+use crate::{Session, user::User, db::establish_connection, error::ErrorKind};
 use crate::error::Error;
 
 #[derive(Queryable)]
