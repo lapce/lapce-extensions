@@ -3,17 +3,15 @@ pub mod user;
 mod github;
 pub mod db;
 pub mod error;
-pub mod plugin;
 pub mod schema;
 use std::time::Duration;
-use crate::plugin::*;
 use dotenvy::dotenv;
 use redis::Client;
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
 use rocket::serde::{Deserialize, Serialize};
 use rocket_oauth2::{OAuth2, HyperRustlsAdapter, StaticProvider, OAuthConfig};
-use rocket_session_store::{redis::*, SessionStore, CookieConfig};
+pub use rocket_session_store::{redis::*, SessionStore, CookieConfig};
 use crate::github::*;
 use crate::user::get_user;
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -43,7 +41,7 @@ fn rocket() -> _ {
 	};
     rocket::build()
         .mount("/", routes![github_callback, github_login])
-        .mount("/api/", routes![get_user, crate::user::logout, publish_plugin, get_plugin_info, get_plugin_zip])
+        .mount("/api/", routes![get_user, crate::user::logout])
         .attach(AdHoc::on_ignite("GitHub OAuth Config", |rocket| async {
             let config = OAuthConfig::new(
                 StaticProvider::GitHub,

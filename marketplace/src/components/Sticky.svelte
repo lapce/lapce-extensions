@@ -1,14 +1,12 @@
 <script lang="ts">
 	import {onMount, onDestroy} from 'svelte'
-	let element;
 	let show = false;
-	let top = true;
+	let lastScrollY = 0;
 	onMount(() => {
-		let lastScrollY = 0;
-		window.onscroll = () => {
+		window.addEventListener("scroll", () => {
 			show = (window.scrollY > lastScrollY);
 			lastScrollY = window.scrollY;
-		}
+		});
 	})
 	
 	onDestroy(() => {
@@ -30,6 +28,6 @@
 	}
 </style>
 
-<div class="sticky" bind:this={element} class:scrolled={show}>
+<div class="sticky" class:scrolled={show}>
 	<slot/>
 </div>

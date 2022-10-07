@@ -31,31 +31,27 @@
     }
 </script>
 
-{#if !loading}
-    {#if logged_in}
-        <div class="indicator">
-            <!-- svelte-ignore a11y-img-redundant-alt -->
-            <img
-                alt="profile picture"
-                class="pf"
-                width="30"
-                src={user.avatar_url}
-            />
-            <span id="username">{user.name}</span>
-            <button id="logout" on:click={logout}>Logout</button>
-        </div>
-    {:else}
-        <a class="login-button" href="/login/github"
-            ><img
-                id="gh-icon"
-                alt="github white icon"
-                width="12"
-                src="/GitHub-Mark-Light-64px.png"
-            />Login</a
-        >
-    {/if}
+{#if logged_in}
+    <div class="indicator">
+        <img
+            alt="pfp"
+            class="pf"
+            width="30"
+            src={user.avatar_url}
+        />
+        <span id="username">{user.name}</span>
+        <button id="logout" on:click={logout}>Logout</button>
+    </div>
+{:else}
+    <a class="login-button" href="/login/github"
+        ><img
+            id="gh-icon"
+            alt="github white icon"
+            width="12"
+            src="/GitHub-Mark-Light-64px.png"
+        />Login</a
+    >
 {/if}
-
 <style>
     #logout {
         padding: 5px 10px;

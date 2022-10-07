@@ -3,3 +3,5 @@
 /marketplace/dist
 # This directory is created by the filesystem implementation of storage
 /fs-registry
+.env
+/.idea/
