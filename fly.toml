@@ -1,0 +1,5 @@
+app = "lapce-editor-registry"
+[build]
+dockerfile = "infra/Dockerfile.fly.io"
+[deploy]
+release_command = "diesel migration run"
