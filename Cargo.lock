@@ -2985,6 +2985,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "prisma_cli"
+version = "0.1.0"
+dependencies = [
+ "prisma-client-rust-cli",
+]
+
+[[package]]
 name = "proc-macro-hack"
 version = "0.5.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4030,7 +4037,6 @@ dependencies = [
  "dotenvy",
  "octorust",
  "prisma-client-rust",
- "prisma-client-rust-cli",
  "redis",
  "reqwest",
  "rocket",

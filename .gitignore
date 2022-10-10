@@ -5,5 +5,4 @@
 /fs-registry
 .env
 /.idea/
-/src/db/prisma.rs
 

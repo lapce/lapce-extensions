@@ -16,10 +16,13 @@ redis = "0.21.6"
 reqwest = { version = "0.11.11", features = ["json"] }
 toml = "0.5.9"
 prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.1" }
-prisma-client-rust-cli = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.1" }
 [dependencies.serde]
 version = "1.0.144"
 features = ["derive"]
 
 [workspace]
 resolver = "2"
+members = ["prisma_cli"]
+default-members=["prisma_cli", "."]
+[profile.release]
+lto = "off"
