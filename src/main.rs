@@ -3,7 +3,6 @@ pub mod user;
 mod github;
 pub mod db;
 pub mod error;
-pub mod schema;
 use std::time::Duration;
 use dotenvy::dotenv;
 use redis::Client;

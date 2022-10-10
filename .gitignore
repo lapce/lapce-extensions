@@ -5,4 +5,5 @@
 /fs-registry
 .env
 /.idea/
-/.cargo
+/src/db/prisma.rs
+

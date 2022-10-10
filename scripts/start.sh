@@ -23,7 +23,7 @@ fi
 echo "[INFO] Waiting 2s for the database to start"
 sleep 2s
 echo "[INFO] Running migrations"
-diesel migration run
+cargo prisma db push
 echo "[INFO] Setting shutdown trap"
 trap stop 1 3 9 2
 echo "[INFO] Starting backend"
