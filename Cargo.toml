@@ -1,4 +1,28 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+default-run = "server"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rocket = { version = "0.5.0-rc.2", features = ["tls", "json", "serde_json", "secrets"] }
+rocket_oauth2 = "0.5.0-rc.1"
+octorust = "0.1.37"
+dotenvy = "0.15.3"
+rocket-session-store = { version = "0.2.0", features = ["redis"] }
+redis = "0.21.6"
+reqwest = { version = "0.11.11", features = ["json"] }
+toml = "0.5.9"
+prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.1" }
+[dependencies.serde]
+version = "1.0.144"
+features = ["derive"]
+
 [workspace]
-members = [
-  "server"
-]
+resolver = "2"
+members = ["prisma_cli"]
+default-members=["prisma_cli", "."]
+[profile.release]
+lto = "off"

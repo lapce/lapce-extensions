@@ -1,0 +1,19 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+generator client {
+    // Corresponds to the cargo alias created earlier
+    provider      = "target/release/prisma_cli"
+    // The location to generate the client. Is relative to the position of the schema
+    output        = "../src/db/prisma.rs"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+	id BigInt @id
+	name String
+	username String
+	avatar_url String
+}

@@ -1,31 +1,27 @@
-use diesel::prelude::*;
+
 use rocket::response::status::Unauthorized;
 use rocket::serde::json::Json;
-use rocket::serde::{Serialize, Deserialize};
 use crate::Session;
-use crate::db::establish_connection;
+use crate::db::{establish_connection, prisma::user};
 use crate::error::*;
-#[derive(Deserialize, Serialize, Queryable, Insertable, AsChangeset, Clone)]
-#[serde(crate = "rocket::serde")]
-#[diesel(table_name = crate::schema::users)]
-pub struct User {
-    pub id: i64,
-    pub name: String,
-    pub username: String,
-    pub avatar_url: String
-}
 
 #[get("/user")]
-pub async fn get_user(session: Session<'_>) -> Result<Json<User>, Unauthorized<Json<Error>>>{
+pub async fn get_user(session: Session<'_>) -> Result<Json<user::Data>, Unauthorized<Json<Error>>>{
     match session.get().await {
         Ok(Some(session)) => {
-
-            use crate::schema::users::dsl::*;
-            let connection = establish_connection();
-            match connection {
-                Ok(mut connection) => {
-                    let user: User = users.find(session.id as i64).first(&mut connection).unwrap();
-                    Ok(Json(user))
+            let client = establish_connection().await;
+            match client {
+                Ok(client) => {
+                    let user = client.user().find_unique(user::id::equals(session.id as i64)).exec().await.ok();
+                    if let Some(Some(user)) = user {
+                        Ok(Json(user))   
+                    } else {
+                        Err(Unauthorized(Some(Json(Error {
+                            kind: ErrorKind::NotLoggedIn,
+                            action: "Send a `token` cookie.".into(),
+                            message: "Unauthorized".into()
+                        }))))
+                    }
                 }
                 Err(err) => {
                     Err(Unauthorized(Some(Json(err))))

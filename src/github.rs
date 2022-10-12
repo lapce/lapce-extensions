@@ -6,9 +6,8 @@ use octorust::Client;
 use octorust::auth::Credentials;
 use rocket::response::status;
 use crate::{Session, SessionInfo};
-use crate::db::establish_connection;
+use crate::db::*;
 use crate::error::*;
-use crate::user::User;
 pub struct GitHub;
 
 #[get("/login/github")]
@@ -36,23 +35,24 @@ pub async fn github_callback(token: TokenResponse<GitHub>, session: Session<'_>)
                     message: "Can't set session on redis db".into()
                 })))
             } else {
-                let user = User {
-                    id: user.id,
-                    username: user.name.clone(),
-                    name: user.login.clone(),
-                    avatar_url: user.avatar_url.clone()
-                };
-                use diesel::prelude::*;
-                use crate::schema::users::dsl::*;
-                let connection = establish_connection();
-                match connection {
-                    Ok(mut connection) => {
-                        diesel::insert_into(users)
-                            .values(&user)
-                            .on_conflict(id)
-                            .do_update()
-                            .set(&user)
-                            .execute(&mut connection).unwrap();
+                let client = establish_connection().await;
+                match client {
+                    Ok(client) => {
+                        client.user().upsert(
+                            prisma::user::id::equals(user.id),
+                            prisma::user::create(
+                                user.id,
+                                user.login.clone(),
+                                user.name.clone(),
+                                user.avatar_url.clone(),
+                                vec![]
+                            ), 
+                            vec![
+                                prisma::user::name::set(user.login.clone()),
+                                prisma::user::username::set(user.name.clone()),
+                                prisma::user::avatar_url::set(user.avatar_url.clone()),
+                            ]
+                        ).exec().await.unwrap();
                         Ok(Redirect::to("/"))
                     }
                     Err(err) => {

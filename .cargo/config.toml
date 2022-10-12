@@ -1,0 +1,2 @@
+[alias]
+prisma = "run -r -p prisma_cli --"

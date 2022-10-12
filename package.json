@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "postinstall": "cd marketplace && npm install && npm run build && cd .."
+  }
+}

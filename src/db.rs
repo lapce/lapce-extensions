@@ -1,14 +1,12 @@
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
+pub mod prisma;
 use dotenvy::dotenv;
-use std::env;
-
+use prisma::PrismaClient;
 use crate::error::{Error, ErrorKind};
 
-pub fn establish_connection() -> Result<PgConnection, Error> {
+pub async fn establish_connection() -> Result<PrismaClient, Error> {
     dotenv().ok();
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let res = PgConnection::establish(&database_url);
+    let res = prisma::new_client().await;
+    
     match res {
         Ok(con) => {
             Ok(con)
