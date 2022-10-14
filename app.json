@@ -1,7 +1,22 @@
 {
-  "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"]
-  "environments": {
-    "review": {
-      "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"]
-    }
+    "name": "Lapce Registry",
+    "description": "Lapce's plugin registry",
+    "repository": "https://github.com/lapce/lapce-extensions",
+    "success_url": "/",
+    "formation": {
+        "web": {
+            "quantity": 1,
+            "size": "free"
+        }
+    },
+    "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"],
+    "environments": {
+        "review": {
+            "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"]
+        }
+    },
+    "buildpacks": [
+        { "url": "heroku/nodejs" },
+        { "url": "emk/rust" }
+    ]
 }
