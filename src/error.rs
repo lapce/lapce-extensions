@@ -1,6 +1,6 @@
 use rocket::serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(crate = "rocket::serde")]
 pub enum ErrorKind {
     NotLoggedIn,
@@ -8,7 +8,7 @@ pub enum ErrorKind {
     GithubApiError,
     DatabaseError(String),
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(crate = "rocket::serde")]
 pub struct Error {
     pub(crate) kind: ErrorKind,
