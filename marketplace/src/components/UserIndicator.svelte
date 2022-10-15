@@ -32,7 +32,8 @@
 {#if logged_in}
   <div class="indicator">
     <img alt="pfp" class="pf" width="30" src={user.avatar_url} />
-    <span id="username">{user.name}</span>
+    <span id="name">{user.name}</span>
+    <span id="username">{user.username}</span>
     <button id="logout" on:click={logout}>Logout</button>
   </div>
 {:else}
@@ -59,6 +60,11 @@
     color: white;
   }
   #username {
+    font-weight: 100;
+    margin: 0px 10px;
+    opacity: 50%;
+  }
+  #name {
     font-weight: bold;
     margin: 0px 10px;
   }
