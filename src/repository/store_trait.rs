@@ -8,7 +8,7 @@ pub struct NewVoltInfo {
     pub display_name: String,
     pub description: String,
     pub author: String,
-    pub publisher: String,
+    pub publisher_id: i64,
 }
 /// This struct is used to create a new version of a plugin
 #[derive(Deserialize, Serialize)]
