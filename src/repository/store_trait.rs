@@ -58,15 +58,20 @@ pub enum UnpublishPluginError {
 pub trait Repository {
     /// Creates a new plugin, plugins are containers that store versions
     /// and versions store the actual plugin data, like the code and themes
-    fn publish(volt_info: NewVoltInfo);
+    fn publish(&mut self, volt_info: NewVoltInfo);
     /// Creates a new version on a existing plugin
     fn create_version(
+        &mut self,
         plugin_name: String,
         version: NewPluginVersion,
     ) -> Result<(), CreateVersionError>;
     /// Yanks a version, this makes the version undownloadable and will make lapce prompt to update
     /// Yanking a version is saying that the version is broken, and must be updated
-    fn yank_version(plugin_name: String, version: String) -> Result<(), YankVersionError>;
+    fn yank_version(
+        &mut self,
+        plugin_name: String,
+        version: String,
+    ) -> Result<(), YankVersionError>;
     /// Unpublishes a plugin from the repository
-    fn unpublish_plugin(plugin_name: String) -> Result<(), UnpublishPluginError>;
+    fn unpublish_plugin(&mut self, plugin_name: String) -> Result<(), UnpublishPluginError>;
 }
