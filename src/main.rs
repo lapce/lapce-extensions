@@ -5,8 +5,6 @@ pub mod error;
 mod github;
 pub mod repository;
 pub mod user;
-use crate::github::*;
-use crate::user::get_user;
 use dotenvy::dotenv;
 use redis::Client;
 use rocket::fairing::AdHoc;
@@ -42,8 +40,11 @@ fn rocket() -> _ {
         },
     };
     rocket::build()
-        .mount("/", routes![github_callback, github_login])
-        .mount("/api/v1", routes![get_user, crate::user::logout])
+        .mount("/", routes![github::callback, github::login])
+        .mount(
+            "/api/v1",
+            routes![user::get_user, user::logout, github::login_with_token],
+        )
         .attach(AdHoc::on_ignite("GitHub OAuth Config", |rocket| async {
             let config = OAuthConfig::new(
                 StaticProvider::GitHub,
@@ -54,7 +55,7 @@ fn rocket() -> _ {
                         .unwrap_or("https://localhost:8000/auth/github".into()),
                 ),
             );
-            rocket.attach(OAuth2::<GitHub>::custom(
+            rocket.attach(OAuth2::<github::GitHub>::custom(
                 HyperRustlsAdapter::default(),
                 config,
             ))
