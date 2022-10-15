@@ -58,7 +58,7 @@ pub enum UnpublishPluginError {
 pub trait Repository {
     /// Creates a new plugin, plugins are containers that store versions
     /// and versions store the actual plugin data, like the code and themes
-    fn publish(&mut self, volt_info: NewVoltInfo);
+    fn publish(&mut self, volt_info: NewVoltInfo) -> Result<(), PublishError>;
     /// Creates a new version on a existing plugin
     fn create_version(
         &mut self,
