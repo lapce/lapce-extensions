@@ -36,6 +36,7 @@ model Version {
   pluginName String
   yanked     Boolean
   digest     String
+  preview    Boolean
 
   @@unique([version, pluginName])
 }

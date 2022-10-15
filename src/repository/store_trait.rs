@@ -20,6 +20,8 @@ pub struct NewPluginVersion {
     pub version: String,
     /// Contains all the theme toml files, they're simple text, so we represent as a array of strings
     pub themes: Vec<String>,
+    /// Tells if this version a pre-release or not
+    pub preview: bool,
 }
 /// Represents a error that might happen when publishing a plugin
 pub enum PublishError {
