@@ -1,1 +1,3 @@
-pub mod store_trait;
+mod fs_impl;
+mod store_trait;
+pub use self::{fs_impl::*, store_trait::*};

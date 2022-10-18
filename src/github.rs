@@ -17,7 +17,7 @@ pub fn login(oauth2: OAuth2<GitHub>, cookies: &CookieJar<'_>) -> Redirect {
 pub async fn finish_login<'a>(gh_token: String, session: &Session<'a>) -> Result<(), Error> {
     let github = Client::new(
         "Lapce Extensions API v1",
-        Credentials::Token(gh_token.clone().into()),
+        Credentials::Token(gh_token.clone()),
     );
     match github {
         Ok(github) => {

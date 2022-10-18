@@ -1,5 +1,9 @@
+use std::io::Cursor;
+
 use rocket::serde::*;
-type Blob = Vec<u8>;
+
+use crate::db::{self, prisma};
+pub type Blob = Vec<u8>;
 /// Contains the necessary information to create a new plugin
 #[derive(Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -9,6 +13,7 @@ pub struct NewVoltInfo {
     pub description: String,
     pub author: String,
     pub publisher_id: i64,
+    pub icon: Option<Blob>,
 }
 /// This struct is used to create a new version of a plugin
 #[derive(Deserialize, Serialize)]
@@ -29,6 +34,8 @@ pub enum PublishError {
     DatabaseError,
     /// A plugin with the same name already exists
     AlreadyExists,
+    InvalidIcon,
+    IoError,
 }
 /// Represents a error that might happen when creating a version
 pub enum CreateVersionError {
@@ -40,15 +47,17 @@ pub enum CreateVersionError {
     LessThanLatestVersion,
     /// The plugin doesn't exist
     NonExistentPlugin,
+    /// Couldn't store the plugin in the database
+    DatabaseError,
+    /// The version is not a valid semver (see https://semver.org)
+    InvalidSemVer,
 }
 /// Represents a error that might happen when yanking a version
 pub enum YankVersionError {
-    /// There was an error while trying to set as yanked
-    IOError,
     /// The version doesn't exist or was already yanked previously
     NonExistentOrAlreadyYanked,
-    /// The plugin doesn't exist
-    NonExistentPlugin,
+    /// Couldn't store the plugin in the database
+    DatabaseError,
 }
 /// Represents a error that might happen when unpublishing a plugin
 pub enum UnpublishPluginError {
@@ -56,12 +65,86 @@ pub enum UnpublishPluginError {
     IOError,
     /// The plugin doesn't exist
     NonExistent,
+    /// Couldn't store the plugin in the database
+    DatabaseError,
+}
+pub enum IconValidationError {
+    TooBig { width: u32, height: u32 },
+    NotAnImage,
+}
+pub fn validate_icon(icon: Blob) -> Option<IconValidationError> {
+    let parsed_image = image::io::Reader::new(Cursor::new(icon)).with_guessed_format();
+    let parsed_image = match parsed_image {
+        Ok(i) => i.decode(),
+        Err(_) => {
+            return Some(IconValidationError::NotAnImage);
+        }
+    };
+    let parsed_image = match parsed_image {
+        Ok(i) => i,
+        Err(_) => {
+            return Some(IconValidationError::NotAnImage);
+        }
+    };
+    if parsed_image.width() > 2000 || parsed_image.height() > 2000 {
+        Some(IconValidationError::TooBig {
+            width: parsed_image.width(),
+            height: parsed_image.height(),
+        })
+    } else {
+        None
+    }
 }
 #[async_trait]
 pub trait Repository {
     /// Creates a new plugin, plugins are containers that store versions
     /// and versions store the actual plugin data, like the code and themes
-    async fn publish(&mut self, volt_info: NewVoltInfo) -> Result<(), PublishError>;
+    async fn publish(&mut self, volt_info: NewVoltInfo) -> Result<(), PublishError> {
+        let db_client = db::connect().await.map_err(|e| {
+            eprintln!("Failed to connect to the database: {:#?}", e);
+            PublishError::DatabaseError
+        })?;
+        let plugin = db_client
+            .plugin()
+            .find_unique(prisma::plugin::name::equals(volt_info.name.clone()))
+            .exec()
+            .await
+            .map_err(|e| {
+                eprintln!("Failed to fetch the plugin from the db: {:#?}", e);
+                PublishError::DatabaseError
+            })?;
+        if plugin.is_some() {
+            println!("Failed to create new plugin: already exists");
+            return Err(PublishError::AlreadyExists);
+        }
+        db_client
+            .plugin()
+            .create(
+                volt_info.name.clone(),
+                volt_info.description.clone(),
+                volt_info.display_name.clone(),
+                volt_info.author.clone(),
+                prisma::user::id::equals(volt_info.publisher_id),
+                vec![],
+            )
+            .exec()
+            .await
+            .map_err(|e| {
+                eprintln!("Failed to create a new plugin: {:#?}", e);
+                PublishError::DatabaseError
+            })?;
+        if let Some(icon) = volt_info.icon {
+            self.save_icon(volt_info.name.clone(), icon).await
+        } else {
+            Ok(())
+        }
+    }
+    /// Saves the plugin icon
+    async fn save_icon(
+        &mut self,
+        plugin_name: String,
+        icon: super::Blob,
+    ) -> Result<(), PublishError>;
     /// Creates a new version on a existing plugin
     async fn create_version(
         &mut self,
