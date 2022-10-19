@@ -33,6 +33,21 @@ impl FileSystemRepository {
 }
 #[async_trait]
 impl Repository for FileSystemRepository {
+    async fn get_plugin(&mut self, name: String) -> Result<prisma::plugin::Data, GetResourceError>{
+        todo!("Get Plugin")
+    }
+    async fn get_plugin_version(&mut self, name: String, version: String) -> Result<prisma::version::Data, GetResourceError> {
+        todo!("Get version")
+    }
+    async fn get_plugin_version_wasm(&mut self, name: String, version: String) -> Result<Vec<u8>, GetResourceError> {
+        todo!("Get version wasm file")
+    }
+    async fn get_plugin_version_themes(&mut self, name: String, version: String) -> Result<Vec<String>, GetResourceError> {
+        todo!("Get plugin version themes")
+    }
+    async fn get_plugin_icon(&mut self, name: String) -> Result<Vec<u8>, GetResourceError> {
+        todo!("Get plugin icon")
+    }
     async fn save_icon(
         &mut self,
         plugin_name: String,

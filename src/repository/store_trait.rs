@@ -95,8 +95,18 @@ pub fn validate_icon(icon: Blob) -> Option<IconValidationError> {
         None
     }
 }
+pub enum GetResourceError {
+    NotFound,
+    DatabaseError(prisma_client_rust::QueryError),
+    IoError
+}
 #[async_trait]
 pub trait Repository {
+    async fn get_plugin(&mut self, name: String) -> Result<prisma::plugin::Data, GetResourceError>;
+    async fn get_plugin_version(&mut self, name: String, version: String) -> Result<prisma::version::Data, GetResourceError>;
+    async fn get_plugin_version_wasm(&mut self, name: String, version: String) -> Result<Vec<u8>, GetResourceError>;
+    async fn get_plugin_version_themes(&mut self, name: String, version: String) -> Result<Vec<String>, GetResourceError>;
+    async fn get_plugin_icon(&mut self, name: String) -> Result<Vec<u8>, GetResourceError>;
     /// Creates a new plugin, plugins are containers that store versions
     /// and versions store the actual plugin data, like the code and themes
     async fn publish(&mut self, volt_info: NewVoltInfo) -> Result<(), PublishError> {
