@@ -33,20 +33,64 @@ impl FileSystemRepository {
 }
 #[async_trait]
 impl Repository for FileSystemRepository {
-    async fn get_plugin(&mut self, name: String) -> Result<prisma::plugin::Data, GetResourceError>{
-        todo!("Get Plugin")
+    async fn get_plugin_version_wasm(
+        &mut self,
+        name: String,
+        version: String,
+    ) -> Result<Vec<u8>, GetResourceError> {
+        {
+            let version = self
+                .get_plugin_version(name.clone(), version.clone())
+                .await?;
+            if version.yanked {
+                return Err(GetResourceError::NotFound);
+            }
+        }
+        let mut path = self.base_path();
+        path.push("versions/");
+        path.push(format!("{}-{}", &name, &version));
+        path.push("plugin.wasm");
+        if path.try_exists().map_err(|_| GetResourceError::IoError)? {
+            std::fs::read(path).map_err(|_| GetResourceError::IoError)
+        } else {
+            Err(GetResourceError::NotFound)
+        }
     }
-    async fn get_plugin_version(&mut self, name: String, version: String) -> Result<prisma::version::Data, GetResourceError> {
-        todo!("Get version")
-    }
-    async fn get_plugin_version_wasm(&mut self, name: String, version: String) -> Result<Vec<u8>, GetResourceError> {
-        todo!("Get version wasm file")
-    }
-    async fn get_plugin_version_themes(&mut self, name: String, version: String) -> Result<Vec<String>, GetResourceError> {
-        todo!("Get plugin version themes")
+    async fn get_plugin_version_themes(
+        &mut self,
+        name: String,
+        version: String,
+    ) -> Result<Vec<String>, GetResourceError> {
+        let version = self
+            .get_plugin_version(name.clone(), version.clone())
+            .await?;
+        if version.yanked {
+            Err(GetResourceError::NotFound)
+        } else {
+            let mut base_dir = self.base_path();
+            base_dir.push("versions/");
+            base_dir.push(format!("{}-{}", &name, &version.version));
+            base_dir.push("themes");
+            let mut themes = vec![];
+            for files in std::fs::read_dir(base_dir).unwrap() {
+                let files = files.unwrap();
+                if files.file_type().unwrap().is_file() {
+                    let path = files.path();
+                    themes.push(std::fs::read_to_string(path).unwrap());
+                }
+            }
+            Ok(themes)
+        }
     }
     async fn get_plugin_icon(&mut self, name: String) -> Result<Vec<u8>, GetResourceError> {
-        todo!("Get plugin icon")
+        let mut path = self.base_path();
+        path.push("icons/");
+        path.push(&name);
+        if path.try_exists().map_err(|_| GetResourceError::IoError)? {
+            std::fs::read(path).map_err(|_| GetResourceError::IoError)
+        } else {
+            Err(GetResourceError::NotFound)
+        }
     }
     async fn save_icon(
         &mut self,
@@ -117,9 +161,11 @@ impl Repository for FileSystemRepository {
                     file.push("plugin.wasm");
                     std::fs::write(file, wasm_file.clone()).unwrap();
                 }
+                let mut themes_folder = base_dir.clone();
+                themes_folder.push("themes");
+                std::fs::create_dir_all(themes_folder.clone()).unwrap();
                 for (i, t) in version.themes.clone().iter().enumerate() {
-                    let mut file = base_dir.clone();
-                    file.push("themes");
+                    let mut file = themes_folder.clone();
                     file.push(format!("{}.toml", i));
                     std::fs::write(file, t).unwrap();
                 }
@@ -149,13 +195,12 @@ impl Repository for FileSystemRepository {
             eprintln!("Failed to connect to the database: {:#?}", e);
             YankVersionError::DatabaseError
         })?;
-        let where_param = prisma::version::UniqueWhereParam::VersionPluginNameEquals(
-            plugin_name.clone(),
-            version.clone(),
-        );
         if let Some(v) = db_client
             .version()
-            .find_unique(where_param.clone())
+            .find_unique(prisma::version::version_plugin_name(
+                plugin_name.clone(),
+                version.clone(),
+            ))
             .exec()
             .await
             .map_err(|_| YankVersionError::DatabaseError)?
@@ -168,7 +213,10 @@ impl Repository for FileSystemRepository {
         }
         db_client
             .version()
-            .update(where_param.clone(), vec![])
+            .update(
+                prisma::version::version_plugin_name(plugin_name.clone(), version.clone()),
+                vec![],
+            )
             .exec()
             .await
             .map_err(|_| YankVersionError::NonExistentOrAlreadyYanked)?;

@@ -98,12 +98,35 @@ pub fn validate_icon(icon: Blob) -> Option<IconValidationError> {
 pub enum GetResourceError {
     NotFound,
     DatabaseError(prisma_client_rust::QueryError),
+    DatabaseConnectionError(prisma_client_rust::NewClientError),
     IoError
 }
 #[async_trait]
 pub trait Repository {
-    async fn get_plugin(&mut self, name: String) -> Result<prisma::plugin::Data, GetResourceError>;
-    async fn get_plugin_version(&mut self, name: String, version: String) -> Result<prisma::version::Data, GetResourceError>;
+    async fn get_plugin_version(&mut self, name: String, version: String) -> Result<prisma::version::Data, GetResourceError> {
+        let db_client = prisma::new_client().await.map_err(|e| {
+            eprintln!("Failed to connect to the database: {:#?}", &e);
+            GetResourceError::DatabaseConnectionError(e)
+        })?;
+        let version_result = db_client.version().find_unique(prisma::version::version_plugin_name(version, name)).exec().await;
+        match version_result {
+            Ok(Some(version)) => Ok(version),
+            Ok(None) => Err(GetResourceError::NotFound),
+            Err(e) => Err(GetResourceError::DatabaseError(e))
+        }
+    }
+    async fn get_plugin(&mut self, name: String) -> Result<prisma::plugin::Data, GetResourceError> {
+        let db_client = prisma::new_client().await.map_err(|e| {
+            eprintln!("Failed to connect to the database: {:#?}", &e);
+            GetResourceError::DatabaseConnectionError(e)
+        })?;
+        let plugin_result = db_client.plugin().find_unique(prisma::plugin::name::equals(name)).exec().await;
+        match plugin_result {
+            Ok(Some(plugin)) => Ok(plugin),
+            Ok(None) => Err(GetResourceError::NotFound),
+            Err(e) => Err(GetResourceError::DatabaseError(e))
+        }
+    }
     async fn get_plugin_version_wasm(&mut self, name: String, version: String) -> Result<Vec<u8>, GetResourceError>;
     async fn get_plugin_version_themes(&mut self, name: String, version: String) -> Result<Vec<String>, GetResourceError>;
     async fn get_plugin_icon(&mut self, name: String) -> Result<Vec<u8>, GetResourceError>;
