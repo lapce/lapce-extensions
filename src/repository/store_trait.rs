@@ -5,7 +5,7 @@ use rocket::serde::*;
 use crate::db::{self, prisma};
 pub type Blob = Vec<u8>;
 /// Contains the necessary information to create a new plugin
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(crate = "rocket::serde")]
 pub struct NewVoltInfo {
     pub name: String,
@@ -16,7 +16,7 @@ pub struct NewVoltInfo {
     pub icon: Option<Blob>,
 }
 /// This struct is used to create a new version of a plugin
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(crate = "rocket::serde")]
 pub struct NewPluginVersion {
     /// This contains all the bytes of the wasm file containing the code
@@ -29,6 +29,7 @@ pub struct NewPluginVersion {
     pub preview: bool,
 }
 /// Represents a error that might happen when publishing a plugin
+#[derive(Debug, PartialEq, Eq)]
 pub enum PublishError {
     /// Couldn't store the plugin in the database
     DatabaseError,
@@ -37,6 +38,7 @@ pub enum PublishError {
     InvalidIcon,
     IoError,
 }
+#[derive(Debug, PartialEq, Eq)]
 /// Represents a error that might happen when creating a version
 pub enum CreateVersionError {
     /// There was an error while trying to write the files
@@ -52,6 +54,7 @@ pub enum CreateVersionError {
     /// The version is not a valid semver (see https://semver.org)
     InvalidSemVer,
 }
+#[derive(Debug, PartialEq, Eq)]
 /// Represents a error that might happen when yanking a version
 pub enum YankVersionError {
     /// The version doesn't exist or was already yanked previously
@@ -59,6 +62,7 @@ pub enum YankVersionError {
     /// Couldn't store the plugin in the database
     DatabaseError,
 }
+#[derive(Debug, PartialEq, Eq)]
 /// Represents a error that might happen when unpublishing a plugin
 pub enum UnpublishPluginError {
     /// There was an error while removing the plugin
@@ -68,6 +72,7 @@ pub enum UnpublishPluginError {
     /// Couldn't store the plugin in the database
     DatabaseError,
 }
+#[derive(Debug, PartialEq, Eq)]
 pub enum IconValidationError {
     TooBig { width: u32, height: u32 },
     NotAnImage,
@@ -95,6 +100,7 @@ pub fn validate_icon(icon: Blob) -> Option<IconValidationError> {
         None
     }
 }
+#[derive(Debug, PartialEq, Eq)]
 pub enum GetResourceError {
     NotFound,
     DatabaseError(prisma_client_rust::QueryError),

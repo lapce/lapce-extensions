@@ -1,0 +1,26 @@
+name: CI
+
+on: [ pull_request ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  run-test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Start databases
+        run: docker-compose up -d
+      - name: Run migrations
+        run: cargo prisma push
+      - name: Run Tests
+        run: cargo test --verbose
+  clippy:
+    name: Clippy & Tidy
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Clippy
+      run: rustup component add clippy-preview && cargo clippy --verbose

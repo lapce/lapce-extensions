@@ -246,3 +246,87 @@ impl Repository for FileSystemRepository {
         }
     }
 }
+// #[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use super::FileSystemRepository;
+    use crate::db::prisma;
+    use crate::repository::NewVoltInfo;
+    use crate::repository::PublishError;
+    use crate::repository::Repository;
+    use rocket::tokio;
+    #[tokio::test]
+    async fn publish_plugin() {
+        let db = prisma::new_client().await.unwrap();
+        db.user()
+            .create(
+                /* ID: */ 1,
+                /* Display Name: */ "Tests".into(),
+                /* Login name: */ "tests".into(),
+                /* Avatar URL: */ "https://example.com".into(),
+                vec![],
+            )
+            .exec()
+            .await
+            .unwrap();
+        let mut repo = FileSystemRepository::default();
+        // Icons bigger than 2000X2000 should be considered invalid
+        // Money doesn't grow in trees!
+        let invalid_icon = image::RgbaImage::new(4000, 4000);
+        let mut invalid_icon_bytes = vec![];
+        invalid_icon
+            .write_to(
+                &mut Cursor::new(&mut invalid_icon_bytes),
+                image::ImageOutputFormat::Png,
+            )
+            .unwrap();
+        assert_eq!(
+            repo.publish(NewVoltInfo {
+                name: "my_plugin".into(),
+                display_name: "My Test plugin".into(),
+                description: "Dummy plugin".into(),
+                author: "tests".into(),
+                publisher_id: 1,
+                icon: Some(invalid_icon_bytes),
+            })
+            .await
+            .unwrap_err(),
+            PublishError::InvalidIcon
+        );
+        // The icon is valid, so the plugin should be published successfully
+        let valid_icon = image::RgbaImage::new(100, 100);
+        let mut valid_icon_bytes: Vec<u8> = Vec::new();
+        valid_icon
+            .write_to(
+                &mut Cursor::new(&mut valid_icon_bytes),
+                image::ImageOutputFormat::Png,
+            )
+            .unwrap();
+
+        repo.publish(NewVoltInfo {
+            name: "my_plugin".into(),
+            display_name: "My Test plugin".into(),
+            description: "Dummy plugin".into(),
+            author: "tests".into(),
+            publisher_id: 1,
+            icon: Some(valid_icon_bytes),
+        })
+        .await
+        .unwrap();
+        // The plugin should be in the database here
+        let new_plugin = db
+            .plugin()
+            .find_unique(prisma::plugin::name::equals("my_plugin".into()))
+            .exec()
+            .await
+            .unwrap()
+            .unwrap();
+        // Make some sanity checks before assuming the code is OK
+        assert_eq!(new_plugin.name, "my_plugin".to_string());
+        assert_eq!(new_plugin.display_name, "My test plugin".to_string());
+        assert_eq!(new_plugin.description, "Dummy plugin");
+        assert_eq!(new_plugin.author, "tests");
+        assert_eq!(new_plugin.publisher_id, 1);
+    }
+}
