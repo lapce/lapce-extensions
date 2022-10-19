@@ -258,6 +258,7 @@ mod tests {
     use rocket::tokio;
     #[tokio::test]
     async fn publish_plugin() {
+        dotenvy::dotenv().unwrap();
         let db = prisma::new_client().await.unwrap();
         db.user()
             .create(
