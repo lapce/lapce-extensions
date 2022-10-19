@@ -16,7 +16,7 @@ jobs:
       - name: Start databases
         run: docker-compose up -d
       - name: Run migrations
-        run: cargo prisma push
+        run: cargo prisma db push
       - name: Run Tests
         run: cargo test
   clippy:
