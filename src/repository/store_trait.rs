@@ -156,6 +156,9 @@ pub trait Repository {
             println!("Failed to create new plugin: already exists");
             return Err(PublishError::AlreadyExists);
         }
+        if let Some(icon) = volt_info.icon {
+            self.save_icon(volt_info.name.clone(), icon).await?;
+        }
         db_client
             .plugin()
             .create(
@@ -172,11 +175,8 @@ pub trait Repository {
                 eprintln!("Failed to create a new plugin: {:#?}", e);
                 PublishError::DatabaseError
             })?;
-        if let Some(icon) = volt_info.icon {
-            self.save_icon(volt_info.name.clone(), icon).await
-        } else {
-            Ok(())
-        }
+        
+        Ok(())
     }
     /// Saves the plugin icon
     async fn save_icon(
