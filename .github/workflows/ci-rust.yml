@@ -18,11 +18,11 @@ jobs:
       - name: Run migrations
         run: cargo prisma push
       - name: Run Tests
-        run: cargo test --verbose
+        run: cargo test
   clippy:
     name: Clippy & Tidy
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - name: Clippy
-      run: rustup component add clippy-preview && cargo clippy --verbose
+      run: rustup component add clippy-preview && cargo clippy
