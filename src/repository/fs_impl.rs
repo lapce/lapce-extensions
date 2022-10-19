@@ -246,7 +246,7 @@ impl Repository for FileSystemRepository {
         }
     }
 }
-// #[cfg(test)]
+#[cfg(test)]
 mod tests {
     use std::io::Cursor;
 

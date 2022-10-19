@@ -100,7 +100,7 @@ pub fn validate_icon(icon: Blob) -> Option<IconValidationError> {
         None
     }
 }
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum GetResourceError {
     NotFound,
     DatabaseError(prisma_client_rust::QueryError),
