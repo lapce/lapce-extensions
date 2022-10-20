@@ -91,7 +91,7 @@ pub fn validate_icon(icon: Blob) -> Option<IconValidationError> {
             return Some(IconValidationError::NotAnImage);
         }
     };
-    if parsed_image.width() > 2000 || parsed_image.height() > 2000 {
+    if parsed_image.width() > 500 || parsed_image.height() > 500 {
         Some(IconValidationError::TooBig {
             width: parsed_image.width(),
             height: parsed_image.height(),

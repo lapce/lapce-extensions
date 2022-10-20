@@ -102,6 +102,7 @@ impl Repository for FileSystemRepository {
         }
         let mut icon_path = self.base_path();
         icon_path.push("icons");
+        std::fs::create_dir_all(icon_path.clone()).map_err(|_| PublishError::IoError)?;
         icon_path.push(&plugin_name);
         std::fs::write(icon_path, icon).map_err(|_| PublishError::IoError)?;
         Ok(())
@@ -248,8 +249,6 @@ impl Repository for FileSystemRepository {
 }
 #[cfg(test)]
 mod tests {
-    use std::io::Cursor;
-
     use super::FileSystemRepository;
     use crate::db::prisma;
     use crate::repository::NewVoltInfo;
@@ -272,16 +271,9 @@ mod tests {
             .await
             .unwrap();
         let mut repo = FileSystemRepository::default();
-        // Icons bigger than 2000X2000 should be considered invalid
+        // Icons bigger than 500X500 should be considered invalid
         // Money doesn't grow in trees!
-        let invalid_icon = image::RgbaImage::new(4000, 4000);
-        let mut invalid_icon_bytes = vec![];
-        invalid_icon
-            .write_to(
-                &mut Cursor::new(&mut invalid_icon_bytes),
-                image::ImageOutputFormat::Png,
-            )
-            .unwrap();
+        let invalid_icon = std::fs::read("test_assets/invalid_icon.png").unwrap();
         assert_eq!(
             repo.publish(NewVoltInfo {
                 name: "my_plugin".into(),
@@ -289,29 +281,21 @@ mod tests {
                 description: "Dummy plugin".into(),
                 author: "tests".into(),
                 publisher_id: 1,
-                icon: Some(invalid_icon_bytes),
+                icon: Some(invalid_icon),
             })
             .await
             .unwrap_err(),
             PublishError::InvalidIcon
         );
         // The icon is valid, so the plugin should be published successfully
-        let valid_icon = image::RgbaImage::new(100, 100);
-        let mut valid_icon_bytes: Vec<u8> = Vec::new();
-        valid_icon
-            .write_to(
-                &mut Cursor::new(&mut valid_icon_bytes),
-                image::ImageOutputFormat::Png,
-            )
-            .unwrap();
-
+        let valid_icon = std::fs::read("test_assets/icon.png").unwrap();
         repo.publish(NewVoltInfo {
             name: "my_plugin".into(),
             display_name: "My Test plugin".into(),
             description: "Dummy plugin".into(),
             author: "tests".into(),
             publisher_id: 1,
-            icon: Some(valid_icon_bytes),
+            icon: Some(valid_icon),
         })
         .await
         .unwrap();
@@ -325,7 +309,7 @@ mod tests {
             .unwrap();
         // Make some sanity checks before assuming the code is OK
         assert_eq!(new_plugin.name, "my_plugin".to_string());
-        assert_eq!(new_plugin.display_name, "My test plugin".to_string());
+        assert_eq!(new_plugin.display_name, "My Test plugin".to_string());
         assert_eq!(new_plugin.description, "Dummy plugin");
         assert_eq!(new_plugin.author, "tests");
         assert_eq!(new_plugin.publisher_id, 1);
