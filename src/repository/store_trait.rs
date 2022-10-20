@@ -1,8 +1,6 @@
-use std::io::Cursor;
-
 use rocket::serde::*;
-
 use crate::db::{self, prisma};
+
 pub type Blob = Vec<u8>;
 /// Contains the necessary information to create a new plugin
 #[derive(Deserialize, Serialize, Debug)]
@@ -74,28 +72,16 @@ pub enum UnpublishPluginError {
 }
 #[derive(Debug, PartialEq, Eq)]
 pub enum IconValidationError {
-    TooBig { width: u32, height: u32 },
+    TooBig { width: usize, height: usize },
     NotAnImage,
 }
-pub fn validate_icon(icon: Blob) -> Option<IconValidationError> {
-    let parsed_image = image::io::Reader::new(Cursor::new(icon)).with_guessed_format();
-    let parsed_image = match parsed_image {
-        Ok(i) => i.decode(),
-        Err(_) => {
-            return Some(IconValidationError::NotAnImage);
-        }
+pub fn validate_icon(icon: &[u8]) -> Option<IconValidationError> {
+    let (width, height) = match imagesize::blob_size(icon) {
+        Ok(dim) => (dim.width, dim.height),
+        Err(_) => return Some(IconValidationError::NotAnImage),
     };
-    let parsed_image = match parsed_image {
-        Ok(i) => i,
-        Err(_) => {
-            return Some(IconValidationError::NotAnImage);
-        }
-    };
-    if parsed_image.width() > 500 || parsed_image.height() > 500 {
-        Some(IconValidationError::TooBig {
-            width: parsed_image.width(),
-            height: parsed_image.height(),
-        })
+    if width > 500 || height > 500 || icon.len() > /* 20 MB*/ 2 * (10usize.pow(7)) {
+        Some(IconValidationError::TooBig { width, height })
     } else {
         None
     }
@@ -105,20 +91,28 @@ pub enum GetResourceError {
     NotFound,
     DatabaseError(prisma_client_rust::QueryError),
     DatabaseConnectionError(prisma_client_rust::NewClientError),
-    IoError
+    IoError,
 }
 #[async_trait]
 pub trait Repository {
-    async fn get_plugin_version(&mut self, name: String, version: String) -> Result<prisma::version::Data, GetResourceError> {
+    async fn get_plugin_version(
+        &mut self,
+        name: String,
+        version: String,
+    ) -> Result<prisma::version::Data, GetResourceError> {
         let db_client = prisma::new_client().await.map_err(|e| {
             eprintln!("Failed to connect to the database: {:#?}", &e);
             GetResourceError::DatabaseConnectionError(e)
         })?;
-        let version_result = db_client.version().find_unique(prisma::version::version_plugin_name(version, name)).exec().await;
+        let version_result = db_client
+            .version()
+            .find_unique(prisma::version::version_plugin_name(version, name))
+            .exec()
+            .await;
         match version_result {
             Ok(Some(version)) => Ok(version),
             Ok(None) => Err(GetResourceError::NotFound),
-            Err(e) => Err(GetResourceError::DatabaseError(e))
+            Err(e) => Err(GetResourceError::DatabaseError(e)),
         }
     }
     async fn get_plugin(&mut self, name: String) -> Result<prisma::plugin::Data, GetResourceError> {
@@ -126,15 +120,27 @@ pub trait Repository {
             eprintln!("Failed to connect to the database: {:#?}", &e);
             GetResourceError::DatabaseConnectionError(e)
         })?;
-        let plugin_result = db_client.plugin().find_unique(prisma::plugin::name::equals(name)).exec().await;
+        let plugin_result = db_client
+            .plugin()
+            .find_unique(prisma::plugin::name::equals(name))
+            .exec()
+            .await;
         match plugin_result {
             Ok(Some(plugin)) => Ok(plugin),
             Ok(None) => Err(GetResourceError::NotFound),
-            Err(e) => Err(GetResourceError::DatabaseError(e))
+            Err(e) => Err(GetResourceError::DatabaseError(e)),
         }
     }
-    async fn get_plugin_version_wasm(&mut self, name: String, version: String) -> Result<Vec<u8>, GetResourceError>;
-    async fn get_plugin_version_themes(&mut self, name: String, version: String) -> Result<Vec<String>, GetResourceError>;
+    async fn get_plugin_version_wasm(
+        &mut self,
+        name: String,
+        version: String,
+    ) -> Result<Vec<u8>, GetResourceError>;
+    async fn get_plugin_version_themes(
+        &mut self,
+        name: String,
+        version: String,
+    ) -> Result<Vec<String>, GetResourceError>;
     async fn get_plugin_icon(&mut self, name: String) -> Result<Vec<u8>, GetResourceError>;
     /// Creates a new plugin, plugins are containers that store versions
     /// and versions store the actual plugin data, like the code and themes
@@ -156,7 +162,8 @@ pub trait Repository {
             println!("Failed to create new plugin: already exists");
             return Err(PublishError::AlreadyExists);
         }
-        if let Some(icon) = volt_info.icon {
+        // Cloning is not cheap, so we get a reference instead
+        if let Some(icon) = &volt_info.icon {
             self.save_icon(volt_info.name.clone(), icon).await?;
         }
         db_client
@@ -175,14 +182,14 @@ pub trait Repository {
                 eprintln!("Failed to create a new plugin: {:#?}", e);
                 PublishError::DatabaseError
             })?;
-        
+
         Ok(())
     }
     /// Saves the plugin icon
     async fn save_icon(
         &mut self,
         plugin_name: String,
-        icon: super::Blob,
+        icon: &[u8],
     ) -> Result<(), PublishError>;
     /// Creates a new version on a existing plugin
     async fn create_version(

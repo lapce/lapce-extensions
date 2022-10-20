@@ -23,7 +23,8 @@ semver = "1.0.14"
 lazy_static = "1.4.0"
 sha1 = "0.10.5"
 hex = "0.4.3"
-image = "0.24.4"
+# image = "0.24.4"
+imagesize = "0.10"
 [dependencies.serde]
 version = "1.0.144"
 features = ["derive"]

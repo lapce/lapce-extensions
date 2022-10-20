@@ -95,9 +95,9 @@ impl Repository for FileSystemRepository {
     async fn save_icon(
         &mut self,
         plugin_name: String,
-        icon: super::Blob,
+        icon: &[u8],
     ) -> Result<(), PublishError> {
-        if validate_icon(icon.clone()).is_some() {
+        if validate_icon(icon).is_some() {
             return Err(PublishError::InvalidIcon);
         }
         let mut icon_path = self.base_path();
