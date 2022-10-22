@@ -1,5 +1,5 @@
-use rocket::serde::*;
 use crate::db::{self, prisma};
+use rocket::serde::*;
 
 pub type Blob = Vec<u8>;
 /// Contains the necessary information to create a new plugin
@@ -144,7 +144,10 @@ pub trait Repository {
     async fn get_plugin_icon(&mut self, name: String) -> Result<Vec<u8>, GetResourceError>;
     /// Creates a new plugin, plugins are containers that store versions
     /// and versions store the actual plugin data, like the code and themes
-    async fn publish(&mut self, volt_info: NewVoltInfo) -> Result<(), PublishError> {
+    async fn publish(
+        &mut self,
+        volt_info: NewVoltInfo,
+    ) -> Result<prisma::plugin::Data, PublishError> {
         let db_client = db::connect().await.map_err(|e| {
             eprintln!("Failed to connect to the database: {:#?}", e);
             PublishError::DatabaseError
@@ -181,16 +184,10 @@ pub trait Repository {
             .map_err(|e| {
                 eprintln!("Failed to create a new plugin: {:#?}", e);
                 PublishError::DatabaseError
-            })?;
-
-        Ok(())
+            })
     }
     /// Saves the plugin icon
-    async fn save_icon(
-        &mut self,
-        plugin_name: String,
-        icon: &[u8],
-    ) -> Result<(), PublishError>;
+    async fn save_icon(&mut self, plugin_name: String, icon: &[u8]) -> Result<(), PublishError>;
     /// Creates a new version on a existing plugin
     async fn create_version(
         &mut self,

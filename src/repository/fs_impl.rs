@@ -92,11 +92,7 @@ impl Repository for FileSystemRepository {
             Err(GetResourceError::NotFound)
         }
     }
-    async fn save_icon(
-        &mut self,
-        plugin_name: String,
-        icon: &[u8],
-    ) -> Result<(), PublishError> {
+    async fn save_icon(&mut self, plugin_name: String, icon: &[u8]) -> Result<(), PublishError> {
         if validate_icon(icon).is_some() {
             return Err(PublishError::InvalidIcon);
         }
@@ -251,15 +247,13 @@ impl Repository for FileSystemRepository {
 mod tests {
     use super::FileSystemRepository;
     use crate::db::prisma;
+    use crate::db::prisma::PrismaClient;
     use crate::repository::NewVoltInfo;
     use crate::repository::PublishError;
     use crate::repository::Repository;
     use rocket::tokio;
-    #[tokio::test]
-    async fn publish_plugin() {
-        dotenvy::dotenv().unwrap();
-        let db = prisma::new_client().await.unwrap();
-        let user = db.user()
+    async fn create_test_user(db: &prisma::PrismaClient) -> prisma::user::Data {
+        db.user()
             .create(
                 /* Display Name: */ "Tests".into(),
                 /* Login name: */ "tests".into(),
@@ -268,47 +262,61 @@ mod tests {
             )
             .exec()
             .await
-            .unwrap();
-        let mut repo = FileSystemRepository::default();
-        // Icons bigger than 500X500 should be considered invalid
-        // Money doesn't grow in trees!
-        let invalid_icon = std::fs::read("test_assets/invalid_icon.png").unwrap();
-        assert_eq!(
-            repo.publish(NewVoltInfo {
-                name: "my_plugin".into(),
-                display_name: "My Test plugin".into(),
-                description: "Dummy plugin".into(),
-                author: "tests".into(),
-                publisher_id: user.id,
-                icon: Some(invalid_icon),
-            })
-            .await
-            .unwrap_err(),
-            PublishError::InvalidIcon
-        );
-        // The icon is valid, so the plugin should be published successfully
-        let valid_icon = std::fs::read("test_assets/icon.png").unwrap();
+            .unwrap()
+    }
+    async fn create_test_plugin_with_icon(
+        repo: &mut FileSystemRepository,
+        user: &prisma::user::Data,
+        icon: Vec<u8>,
+    ) -> Result<prisma::plugin::Data, PublishError> {
         repo.publish(NewVoltInfo {
             name: "my_plugin".into(),
             display_name: "My Test plugin".into(),
             description: "Dummy plugin".into(),
             author: "tests".into(),
             publisher_id: user.id,
-            icon: Some(valid_icon),
+            icon: Some(icon),
         })
         .await
-        .unwrap();
-        // The plugin should be in the database here
-        let new_plugin = db
-            .plugin()
-            .find_unique(prisma::plugin::name::equals("my_plugin".into()))
-            .exec()
-            .await
-            .unwrap()
-            .expect("plugin exists");
-        // Cleanup DB
+    }
+    async fn clear_db(db: &PrismaClient) {
         db.plugin().delete_many(vec![]).exec().await.unwrap();
         db.user().delete_many(vec![]).exec().await.unwrap();
+    }
+    async fn create_test_plugin(
+        repo: &mut FileSystemRepository,
+        user: &prisma::user::Data,
+    ) -> prisma::plugin::Data {
+        let valid_icon = std::fs::read("test_assets/icon.png").unwrap();
+        create_test_plugin_with_icon(repo, user, valid_icon)
+            .await
+            .unwrap()
+    }
+    async fn db() -> PrismaClient {
+        prisma::new_client().await.unwrap()
+    }
+    #[tokio::test]
+    async fn publish_plugin_with_invalid_icon() {
+        dotenvy::dotenv().unwrap();
+        let db = db().await;
+        let user = create_test_user(&db).await;
+        let mut repo = FileSystemRepository::default();
+        // Icons bigger than 500X500 should be considered invalid
+        // Money doesn't grow in trees!
+        let invalid_icon = std::fs::read("test_assets/invalid_icon.png").unwrap();
+        let res = create_test_plugin_with_icon(&mut repo, &user, invalid_icon).await;
+        clear_db(&db).await;
+        assert_eq!(res.unwrap_err(), PublishError::InvalidIcon);
+    }
+    #[tokio::test]
+    async fn publish_plugin_with_valid_icon() {
+        let db = db().await;
+        let user = create_test_user(&db).await;
+        let mut repo = FileSystemRepository::default();
+        // The icon is valid, so the plugin should be published successfully
+        let new_plugin = create_test_plugin(&mut repo, &user).await;
+        // Cleanup DB
+        clear_db(&db).await;
         // Make some sanity checks before assuming the code is OK
         assert_eq!(new_plugin.name, "my_plugin".to_string());
         assert_eq!(new_plugin.display_name, "My Test plugin".to_string());
