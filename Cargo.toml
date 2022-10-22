@@ -33,5 +33,5 @@ features = ["derive"]
 resolver = "2"
 members = ["prisma_cli"]
 default-members = ["prisma_cli", "."]
-[profile.release]
-lto = "off"
+[profile.bench]
+debug = true

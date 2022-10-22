@@ -43,11 +43,10 @@ pub async fn finish_login<'a>(gh_token: String, session: &Session<'a>) -> Result
                     .upsert(
                         prisma::user::id::equals(user.id),
                         prisma::user::create(
-                            user.id,
                             user.name.clone(),
                             user.login.clone(),
                             user.avatar_url.clone(),
-                            vec![],
+                            vec![prisma::user::id::set(user.id)],
                         ),
                         vec![
                             prisma::user::name::set(user.name.clone()),

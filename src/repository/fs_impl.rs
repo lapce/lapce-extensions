@@ -259,9 +259,8 @@ mod tests {
     async fn publish_plugin() {
         dotenvy::dotenv().unwrap();
         let db = prisma::new_client().await.unwrap();
-        db.user()
+        let user = db.user()
             .create(
-                /* ID: */ 1,
                 /* Display Name: */ "Tests".into(),
                 /* Login name: */ "tests".into(),
                 /* Avatar URL: */ "https://example.com".into(),
@@ -280,7 +279,7 @@ mod tests {
                 display_name: "My Test plugin".into(),
                 description: "Dummy plugin".into(),
                 author: "tests".into(),
-                publisher_id: 1,
+                publisher_id: user.id,
                 icon: Some(invalid_icon),
             })
             .await
@@ -294,7 +293,7 @@ mod tests {
             display_name: "My Test plugin".into(),
             description: "Dummy plugin".into(),
             author: "tests".into(),
-            publisher_id: 1,
+            publisher_id: user.id,
             icon: Some(valid_icon),
         })
         .await
@@ -306,12 +305,15 @@ mod tests {
             .exec()
             .await
             .unwrap()
-            .unwrap();
+            .expect("plugin exists");
+        // Cleanup DB
+        db.plugin().delete_many(vec![]).exec().await.unwrap();
+        db.user().delete_many(vec![]).exec().await.unwrap();
         // Make some sanity checks before assuming the code is OK
         assert_eq!(new_plugin.name, "my_plugin".to_string());
         assert_eq!(new_plugin.display_name, "My Test plugin".to_string());
         assert_eq!(new_plugin.description, "Dummy plugin");
         assert_eq!(new_plugin.author, "tests");
-        assert_eq!(new_plugin.publisher_id, 1);
+        assert_eq!(new_plugin.publisher_id, user.id);
     }
 }

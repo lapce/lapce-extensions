@@ -13,7 +13,7 @@ datasource db {
 }
 
 model User {
-  id         BigInt   @id
+  id         BigInt   @id @default(autoincrement())
   name       String
   username   String
   avatar_url String
