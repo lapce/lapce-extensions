@@ -1,7 +1,8 @@
 tasks:
   - name: Backend
     init: |
-      cargo build -p server
+      cargo build
+      cp .env.example .env
     command: |
       export GP_URL=$(gp url)
       export GH_REDIRECT_URL="${GP_URL:0:8}8000-${GP_URL:8}/auth/github"
