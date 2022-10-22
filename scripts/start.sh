@@ -27,4 +27,4 @@ cargo prisma db push
 echo "[INFO] Setting shutdown trap"
 trap stop 1 3 9 2
 echo "[INFO] Starting backend"
-cargo watch -x "run --bin server" -w server
+cargo watch -x "run"
