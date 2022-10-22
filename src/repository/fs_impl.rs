@@ -269,8 +269,11 @@ mod tests {
         user: &prisma::user::Data,
         icon: Vec<u8>,
     ) -> Result<prisma::plugin::Data, PublishError> {
+        let name = names::Generator::with_naming(names::Name::Numbered)
+            .next()
+            .unwrap();
         repo.publish(NewVoltInfo {
-            name: "my_plugin".into(),
+            name: name.clone(),
             display_name: "My Test plugin".into(),
             description: "Dummy plugin".into(),
             author: "tests".into(),
@@ -279,16 +282,12 @@ mod tests {
         })
         .await
     }
-    async fn clear_db(db: &PrismaClient) {
-        db.plugin().delete_many(vec![]).exec().await.unwrap();
-        db.user().delete_many(vec![]).exec().await.unwrap();
-    }
     async fn create_test_plugin(
         repo: &mut FileSystemRepository,
         user: &prisma::user::Data,
     ) -> prisma::plugin::Data {
-        let valid_icon = std::fs::read("test_assets/icon.png").unwrap();
-        create_test_plugin_with_icon(repo, user, valid_icon)
+        let icon = std::fs::read("test_assets/icon.png").unwrap();
+        create_test_plugin_with_icon(repo, user, icon)
             .await
             .unwrap()
     }
@@ -305,7 +304,6 @@ mod tests {
         // Money doesn't grow in trees!
         let invalid_icon = std::fs::read("test_assets/invalid_icon.png").unwrap();
         let res = create_test_plugin_with_icon(&mut repo, &user, invalid_icon).await;
-        clear_db(&db).await;
         assert_eq!(res.unwrap_err(), PublishError::InvalidIcon);
     }
     #[tokio::test]
@@ -314,12 +312,23 @@ mod tests {
         let user = create_test_user(&db).await;
         let mut repo = FileSystemRepository::default();
         // The icon is valid, so the plugin should be published successfully
-        let new_plugin = create_test_plugin(&mut repo, &user).await;
-        // Cleanup DB
-        clear_db(&db).await;
+        let icon = std::fs::read("test_assets/icon.png").unwrap();
+        let name = names::Generator::with_naming(names::Name::Numbered)
+            .next()
+            .unwrap();
+        let new_plugin = repo
+            .publish(NewVoltInfo {
+                name: name.clone(),
+                display_name: format!("Test plugin {name}"),
+                description: "Dummy plugin".into(),
+                author: "tests".into(),
+                publisher_id: user.id,
+                icon: Some(icon),
+            })
+            .await.unwrap();
         // Make some sanity checks before assuming the code is OK
-        assert_eq!(new_plugin.name, "my_plugin".to_string());
-        assert_eq!(new_plugin.display_name, "My Test plugin".to_string());
+        assert_eq!(new_plugin.name, name);
+        assert_eq!(new_plugin.display_name, format!("Test plugin {name}"));
         assert_eq!(new_plugin.description, "Dummy plugin");
         assert_eq!(new_plugin.author, "tests");
         assert_eq!(new_plugin.publisher_id, user.id);

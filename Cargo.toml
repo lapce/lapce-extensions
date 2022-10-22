@@ -35,3 +35,6 @@ members = ["prisma_cli"]
 default-members = ["prisma_cli", "."]
 [profile.bench]
 debug = true
+
+[dev-dependencies]
+names = "0.14"
