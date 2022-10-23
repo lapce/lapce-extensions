@@ -3,7 +3,7 @@ use crate::db::{self, prisma};
 use super::*;
 use lazy_static::*;
 use sha1::{Digest, Sha1};
-use std::{cmp::Ordering, path::PathBuf, str::FromStr};
+use std::{cmp::Ordering, path::PathBuf, str::FromStr, fmt::Display};
 
 #[cfg(test)]
 mod tests;
@@ -28,6 +28,27 @@ impl FileSystemRepository {
     pub fn base_path(&self) -> PathBuf {
         self.base_path.clone()
     }
+    fn version_path<P: AsRef<str> + Display, V: AsRef<str> + Display>(&self, plugin_name: P, version: V) -> PathBuf {
+        let mut base_dir = self.base_path();
+        base_dir.push("versions");
+        base_dir.push(format!("{}-{}", plugin_name, version));
+        base_dir
+    }
+    fn version_themes_path<P: AsRef<str> + Display, V: AsRef<str> + Display>(&self, plugin_name: P, version: V) -> PathBuf {
+        let mut base_dir = self.version_path(&plugin_name, &version);
+        base_dir.push("themes");
+        base_dir
+    }
+    fn version_plugin_wasm_path<P: AsRef<str> + Display, V: AsRef<str> + Display>(&self, plugin_name: P, version: V) -> PathBuf {
+        let mut base_dir = self.version_path(&plugin_name, &version);
+        base_dir.push("plugin.wasm");
+        base_dir
+    }
+    fn icons_path(&self) -> PathBuf {
+        let mut base_dir = self.base_path();
+        base_dir.push("icons");
+        base_dir
+    }
     fn remove_version(&self, plugin_name: String, version: String) -> std::io::Result<()> {
         let mut path = self.base_path();
         path.push("versions/");
@@ -51,10 +72,7 @@ impl Repository for FileSystemRepository {
                 return Err(GetResourceError::NotFound);
             }
         }
-        let mut path = self.base_path();
-        path.push("versions/");
-        path.push(format!("{}-{}", &name, &version));
-        path.push("plugin.wasm");
+        let path = self.version_plugin_wasm_path(&name, &version);
         if path.try_exists().map_err(|_| GetResourceError::IoError)? {
             std::fs::read(path).map_err(|_| GetResourceError::IoError)
         } else {
@@ -72,10 +90,7 @@ impl Repository for FileSystemRepository {
         if version.yanked {
             Err(GetResourceError::NotFound)
         } else {
-            let mut base_dir = self.base_path();
-            base_dir.push("versions");
-            base_dir.push(format!("{}-{}", &name, &version.version));
-            base_dir.push("themes");
+            let base_dir = self.version_themes_path(&name, &version.version);
             let mut themes = vec![];
             for files in std::fs::read_dir(base_dir).unwrap() {
                 let files = files.unwrap();
@@ -88,8 +103,7 @@ impl Repository for FileSystemRepository {
         }
     }
     async fn get_plugin_icon(&mut self, name: String) -> Result<Vec<u8>, GetResourceError> {
-        let mut path = self.base_path();
-        path.push("icons/");
+        let mut path = self.icons_path();
         path.push(&name);
         if path.try_exists().map_err(|_| GetResourceError::IoError)? {
             std::fs::read(path).map_err(|_| GetResourceError::IoError)
@@ -101,8 +115,7 @@ impl Repository for FileSystemRepository {
         if validate_icon(icon).is_some() {
             return Err(PublishError::InvalidIcon);
         }
-        let mut icon_path = self.base_path();
-        icon_path.push("icons");
+        let mut icon_path = self.icons_path();
         std::fs::create_dir_all(icon_path.clone()).map_err(|_| PublishError::IoError)?;
         icon_path.push(&plugin_name);
         std::fs::write(icon_path, icon).map_err(|_| PublishError::IoError)?;
@@ -145,28 +158,15 @@ impl Repository for FileSystemRepository {
                         _ => {}
                     }
                 }
-                let mut hasher = Sha1::new();
-                if let Some(wasm_file) = &version.wasm_file {
-                    hasher.update(wasm_file);
-                }
-
-                for theme in &version.themes {
-                    hasher.update(theme.as_bytes());
-                }
-                hasher.update(version.version.as_bytes());
-                hasher.update(plugin_name.as_bytes());
-                let digest = hex::encode(hasher.finalize());
-                let mut base_dir = self.base_path();
-                base_dir.push("versions/");
-                base_dir.push(format!("{}-{}", &plugin.name, &version.version));
+                
+                let digest = digest_version(&version.version, &plugin.name, &version.themes, &version.wasm_file);
+                let base_dir = self.version_path(&plugin.name, &version.version);
                 std::fs::create_dir_all(base_dir.clone()).unwrap();
                 if let Some(wasm_file) = &version.wasm_file {
-                    let mut file = base_dir.clone();
-                    file.push("plugin.wasm");
+                    let file = self.version_plugin_wasm_path(&plugin.name, &version.version);
                     std::fs::write(file, wasm_file.clone()).unwrap();
                 }
-                let mut themes_folder = base_dir.clone();
-                themes_folder.push("themes");
+                let themes_folder = self.version_themes_path(&plugin.name, &version.version);
                 std::fs::create_dir_all(themes_folder.clone()).unwrap();
                 for (i, t) in version.themes.clone().iter().enumerate() {
                     let mut file = themes_folder.clone();
@@ -257,4 +257,16 @@ impl Repository for FileSystemRepository {
             Err(UnpublishPluginError::NonExistent)
         }
     }
+}
+fn digest_version(version: &str, plugin_name: &str, themes: &[String], wasm: &Option<Vec<u8>>) -> String {
+    let mut hasher = Sha1::new();
+    if let Some(wasm_file) = wasm {
+        hasher.update(wasm_file);
+    }
+    for theme in themes {
+        hasher.update(theme.as_bytes());
+    }
+    hasher.update(version.as_bytes());
+    hasher.update(plugin_name.as_bytes());
+    hex::encode(hasher.finalize())
 }
