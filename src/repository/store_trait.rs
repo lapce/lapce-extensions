@@ -9,7 +9,6 @@ pub struct NewVoltInfo {
     pub name: String,
     pub display_name: String,
     pub description: String,
-    pub author: String,
     pub publisher_id: i64,
     pub icon: Option<Blob>,
 }
@@ -182,7 +181,6 @@ pub trait Repository {
                 format!("{}.{}", publisher.username, volt_info.name),
                 volt_info.description.clone(),
                 volt_info.display_name.clone(),
-                volt_info.author.clone(),
                 prisma::user::id::equals(volt_info.publisher_id),
                 vec![],
             )

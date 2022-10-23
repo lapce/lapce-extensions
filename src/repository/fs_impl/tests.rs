@@ -34,7 +34,6 @@ async fn create_test_plugin_with_icon(
         name: name.clone(),
         display_name: "My Test plugin".into(),
         description: "Dummy plugin".into(),
-        author: "tests".into(),
         publisher_id: user.id,
         icon: Some(icon),
     })
@@ -83,7 +82,6 @@ async fn publish_plugin_with_valid_icon() {
             name: name.clone(),
             display_name: format!("Test plugin {}", name),
             description: "Dummy plugin".into(),
-            author: "tests".into(),
             publisher_id: user.id,
             icon: Some(icon.clone()),
         })
@@ -93,7 +91,6 @@ async fn publish_plugin_with_valid_icon() {
     assert_eq!(new_plugin.name, format!("tests.{name}"));
     assert_eq!(new_plugin.display_name, format!("Test plugin {name}"));
     assert_eq!(new_plugin.description, "Dummy plugin");
-    assert_eq!(new_plugin.author, "tests");
     assert_eq!(new_plugin.publisher_id, user.id);
     let repo_icon = repo.get_plugin_icon(name.clone()).await.unwrap();
     let actual_icon = std::fs::read(format!("fs-registry/icons/{name}")).unwrap();

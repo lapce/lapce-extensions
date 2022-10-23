@@ -228,7 +228,7 @@ impl Repository for FileSystemRepository {
             )
             .exec()
             .await
-            .map_err(|e| YankVersionError::DatabaseError)?;
+            .map_err(|_e| YankVersionError::DatabaseError)?;
         Ok(())
     }
 

@@ -24,7 +24,6 @@ model Plugin {
   name         String    @id
   description  String
   display_name String
-  author       String
   publisher    User      @relation(fields: [publisherId], references: [id])
   publisherId  BigInt
   versions     Version[]
