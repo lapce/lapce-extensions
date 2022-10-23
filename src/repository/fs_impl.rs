@@ -73,7 +73,7 @@ impl Repository for FileSystemRepository {
             Err(GetResourceError::NotFound)
         } else {
             let mut base_dir = self.base_path();
-            base_dir.push("versions/");
+            base_dir.push("versions");
             base_dir.push(format!("{}-{}", &name, &version.version));
             base_dir.push("themes");
             let mut themes = vec![];
