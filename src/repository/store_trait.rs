@@ -89,8 +89,8 @@ pub fn validate_icon(icon: &[u8]) -> Option<IconValidationError> {
 #[derive(Debug)]
 pub enum GetResourceError {
     NotFound,
-    DatabaseError(prisma_client_rust::QueryError),
-    DatabaseConnectionError(prisma_client_rust::NewClientError),
+    DatabaseError,
+    DatabaseConnectionError,
     IoError,
 }
 #[async_trait]
@@ -102,7 +102,7 @@ pub trait Repository {
     ) -> Result<prisma::version::Data, GetResourceError> {
         let db_client = prisma::new_client().await.map_err(|e| {
             eprintln!("Failed to connect to the database: {:#?}", &e);
-            GetResourceError::DatabaseConnectionError(e)
+            GetResourceError::DatabaseConnectionError
         })?;
         let version_result = db_client
             .version()
@@ -110,15 +110,21 @@ pub trait Repository {
             .exec()
             .await;
         match version_result {
-            Ok(Some(version)) => Ok(version),
+            Ok(Some(version)) => {
+                if version.yanked {
+                    Err(GetResourceError::NotFound)
+                } else {
+                    Ok(version)
+                }
+            },
             Ok(None) => Err(GetResourceError::NotFound),
-            Err(e) => Err(GetResourceError::DatabaseError(e)),
+            Err(_) => Err(GetResourceError::DatabaseError),
         }
     }
     async fn get_plugin(&mut self, name: String) -> Result<prisma::plugin::Data, GetResourceError> {
         let db_client = prisma::new_client().await.map_err(|e| {
             eprintln!("Failed to connect to the database: {:#?}", &e);
-            GetResourceError::DatabaseConnectionError(e)
+            GetResourceError::DatabaseConnectionError
         })?;
         let plugin_result = db_client
             .plugin()
@@ -128,7 +134,7 @@ pub trait Repository {
         match plugin_result {
             Ok(Some(plugin)) => Ok(plugin),
             Ok(None) => Err(GetResourceError::NotFound),
-            Err(e) => Err(GetResourceError::DatabaseError(e)),
+            Err(_) => Err(GetResourceError::DatabaseError),
         }
     }
     async fn get_plugin_version_wasm(

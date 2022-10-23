@@ -2,8 +2,8 @@ use crate::db::{self, prisma};
 
 use super::*;
 use lazy_static::*;
-use std::{path::PathBuf, str::FromStr};
 use sha1::{Digest, Sha1};
+use std::{cmp::Ordering, path::PathBuf, str::FromStr};
 
 #[cfg(test)]
 mod tests;
@@ -139,10 +139,10 @@ impl Repository for FileSystemRepository {
                 let previous_versions = plugin.versions().unwrap();
                 for previous_version in previous_versions {
                     let parsed_version = parse_semver(&previous_version.version);
-                    if parsed_version == semversion {
-                        return Err(CreateVersionError::AlreadyExists);
-                    } else if parsed_version > semversion {
-                        return Err(CreateVersionError::LessThanLatestVersion);
+                    match parsed_version.cmp(&semversion) {
+                        Ordering::Equal => return Err(CreateVersionError::AlreadyExists),
+                        Ordering::Greater => return Err(CreateVersionError::LessThanLatestVersion),
+                        _ => {}
                     }
                 }
                 let mut hasher = Sha1::new();
@@ -173,14 +173,19 @@ impl Repository for FileSystemRepository {
                     file.push(format!("{}.toml", i));
                     std::fs::write(file, t).unwrap();
                 }
-                db_client.version().create(
-                    version.version,
-                    prisma::plugin::name::equals(plugin.name.clone()),
-                    false,
-                    digest,
-                    version.preview,
-                    vec![],
-                ).exec().await.map_err(|_| CreateVersionError::DatabaseError)?;
+                db_client
+                    .version()
+                    .create(
+                        version.version,
+                        prisma::plugin::name::equals(plugin.name.clone()),
+                        false,
+                        digest,
+                        version.preview,
+                        vec![],
+                    )
+                    .exec()
+                    .await
+                    .map_err(|_| CreateVersionError::DatabaseError)?;
                 Ok(())
             }
             Err(e) => {
@@ -202,8 +207,8 @@ impl Repository for FileSystemRepository {
         if let Some(v) = db_client
             .version()
             .find_unique(prisma::version::version_plugin_name(
-                plugin_name.clone(),
                 version.clone(),
+                plugin_name.clone(),
             ))
             .exec()
             .await
@@ -218,12 +223,12 @@ impl Repository for FileSystemRepository {
         db_client
             .version()
             .update(
-                prisma::version::version_plugin_name(plugin_name.clone(), version.clone()),
-                vec![],
+                prisma::version::version_plugin_name(version.clone(), plugin_name.clone()),
+                vec![prisma::version::yanked::set(true)],
             )
             .exec()
             .await
-            .map_err(|_| YankVersionError::NonExistentOrAlreadyYanked)?;
+            .map_err(|e| YankVersionError::DatabaseError)?;
         Ok(())
     }
 

@@ -1,8 +1,10 @@
 use crate::db::prisma;
 use crate::db::prisma::PrismaClient;
 use crate::repository::FileSystemRepository;
+use crate::repository::GetResourceError;
 use crate::repository::PublishError;
 use crate::repository::Repository;
+use crate::repository::YankVersionError;
 use crate::repository::{CreateVersionError, NewPluginVersion, NewVoltInfo};
 use rocket::tokio;
 
@@ -174,6 +176,39 @@ async fn try_republish_version() {
 }
 
 #[tokio::test]
+async fn try_publish_yanked_version() {
+    let db = db().await;
+    let user = create_test_user(&db).await;
+    let mut repo = FileSystemRepository::default();
+    let plugin = create_test_plugin(&mut repo, &user).await;
+    repo.create_version(
+        plugin.name.clone(),
+        NewPluginVersion {
+            preview: false,
+            themes: vec![],
+            version: "0.1.0".into(),
+            wasm_file: None,
+        },
+    )
+    .await
+    .unwrap();
+    repo.yank_version(plugin.name.clone(), "0.1.0".into()).await.unwrap();
+    assert_eq!(
+        repo.create_version(
+            plugin.name,
+            NewPluginVersion {
+                preview: false,
+                themes: vec![],
+                version: "0.1.0".into(),
+                wasm_file: None,
+            }
+        )
+        .await
+        .unwrap_err(),
+        CreateVersionError::AlreadyExists
+    );
+}
+#[tokio::test]
 async fn try_publish_version_older_version_than_latest() {
     let db = db().await;
     let user = create_test_user(&db).await;
@@ -270,4 +305,45 @@ async fn publish_version_with_themes_and_wasm() {
         .unwrap(),
         expected_wasm
     );
+}
+#[tokio::test]
+async fn get_yanked_version(){
+    let db = db().await;
+    let user = create_test_user(&db).await;
+    let mut repo = FileSystemRepository::default();
+    let plugin = create_test_plugin(&mut repo, &user).await;
+    repo.create_version(
+        plugin.name.clone(),
+        NewPluginVersion {
+            preview: false,
+            themes: vec![],
+            version: "0.1.0".into(),
+            wasm_file: None,
+        },
+    )
+    .await
+    .unwrap();
+    repo.yank_version(plugin.name.clone(), "0.1.0".into()).await.unwrap();
+    assert!(matches!(repo.get_plugin_version(plugin.name.clone(), "0.1.0".into()).await.unwrap_err(), GetResourceError::NotFound));
+}
+
+#[tokio::test]
+async fn try_yanking_twice(){
+    let db = db().await;
+    let user = create_test_user(&db).await;
+    let mut repo = FileSystemRepository::default();
+    let plugin = create_test_plugin(&mut repo, &user).await;
+    repo.create_version(
+        plugin.name.clone(),
+        NewPluginVersion {
+            preview: false,
+            themes: vec![],
+            version: "0.1.0".into(),
+            wasm_file: None,
+        },
+    )
+    .await
+    .unwrap();
+    repo.yank_version(plugin.name.clone(), "0.1.0".into()).await.unwrap();
+    assert_eq!(repo.yank_version(plugin.name.clone(), "0.1.0".into()).await.unwrap_err(), YankVersionError::NonExistentOrAlreadyYanked);
 }
