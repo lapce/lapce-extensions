@@ -3,12 +3,17 @@ use crate::db::{self, prisma};
 use super::*;
 use lazy_static::*;
 use std::{path::PathBuf, str::FromStr};
+use sha1::{Digest, Sha1};
+
+#[cfg(test)]
+mod tests;
 lazy_static! {
     pub static ref DEFAULT_BASE_PATH: PathBuf = PathBuf::from_str("fs-registry").unwrap();
 }
 pub struct FileSystemRepository {
     base_path: PathBuf,
 }
+
 impl Default for FileSystemRepository {
     fn default() -> Self {
         Self {
@@ -125,6 +130,7 @@ impl Repository for FileSystemRepository {
         match db_client
             .plugin()
             .find_unique(prisma::plugin::name::equals(plugin_name.clone()))
+            .with(prisma::plugin::versions::fetch(vec![]))
             .exec()
             .await
         {
@@ -133,11 +139,12 @@ impl Repository for FileSystemRepository {
                 let previous_versions = plugin.versions().unwrap();
                 for previous_version in previous_versions {
                     let parsed_version = parse_semver(&previous_version.version);
-                    if parsed_version > semversion {
+                    if parsed_version == semversion {
+                        return Err(CreateVersionError::AlreadyExists);
+                    } else if parsed_version > semversion {
                         return Err(CreateVersionError::LessThanLatestVersion);
                     }
                 }
-                use sha1::{Digest, Sha1};
                 let mut hasher = Sha1::new();
                 if let Some(wasm_file) = &version.wasm_file {
                     hasher.update(wasm_file);
@@ -173,7 +180,7 @@ impl Repository for FileSystemRepository {
                     digest,
                     version.preview,
                     vec![],
-                );
+                ).exec().await.map_err(|_| CreateVersionError::DatabaseError)?;
                 Ok(())
             }
             Err(e) => {
@@ -228,6 +235,7 @@ impl Repository for FileSystemRepository {
         let plugin = db_client
             .plugin()
             .find_unique(prisma::plugin::name::equals(plugin_name.clone()))
+            .with(prisma::plugin::versions::fetch(vec![]))
             .exec()
             .await
             .unwrap();
@@ -241,96 +249,5 @@ impl Repository for FileSystemRepository {
         } else {
             Err(UnpublishPluginError::NonExistent)
         }
-    }
-}
-#[cfg(test)]
-mod tests {
-    use super::FileSystemRepository;
-    use crate::db::prisma;
-    use crate::db::prisma::PrismaClient;
-    use crate::repository::NewVoltInfo;
-    use crate::repository::PublishError;
-    use crate::repository::Repository;
-    use rocket::tokio;
-    async fn create_test_user(db: &prisma::PrismaClient) -> prisma::user::Data {
-        db.user()
-            .create(
-                /* Display Name: */ "Tests".into(),
-                /* Login name: */ "tests".into(),
-                /* Avatar URL: */ "https://example.com".into(),
-                vec![],
-            )
-            .exec()
-            .await
-            .unwrap()
-    }
-    async fn create_test_plugin_with_icon(
-        repo: &mut FileSystemRepository,
-        user: &prisma::user::Data,
-        icon: Vec<u8>,
-    ) -> Result<prisma::plugin::Data, PublishError> {
-        let name = names::Generator::with_naming(names::Name::Numbered)
-            .next()
-            .unwrap();
-        repo.publish(NewVoltInfo {
-            name: name.clone(),
-            display_name: "My Test plugin".into(),
-            description: "Dummy plugin".into(),
-            author: "tests".into(),
-            publisher_id: user.id,
-            icon: Some(icon),
-        })
-        .await
-    }
-    async fn create_test_plugin(
-        repo: &mut FileSystemRepository,
-        user: &prisma::user::Data,
-    ) -> prisma::plugin::Data {
-        let icon = std::fs::read("test_assets/icon.png").unwrap();
-        create_test_plugin_with_icon(repo, user, icon)
-            .await
-            .unwrap()
-    }
-    async fn db() -> PrismaClient {
-        prisma::new_client().await.unwrap()
-    }
-    #[tokio::test]
-    async fn publish_plugin_with_invalid_icon() {
-        dotenvy::dotenv().unwrap();
-        let db = db().await;
-        let user = create_test_user(&db).await;
-        let mut repo = FileSystemRepository::default();
-        // Icons bigger than 500X500 should be considered invalid
-        // Money doesn't grow in trees!
-        let invalid_icon = std::fs::read("test_assets/invalid_icon.png").unwrap();
-        let res = create_test_plugin_with_icon(&mut repo, &user, invalid_icon).await;
-        assert_eq!(res.unwrap_err(), PublishError::InvalidIcon);
-    }
-    #[tokio::test]
-    async fn publish_plugin_with_valid_icon() {
-        let db = db().await;
-        let user = create_test_user(&db).await;
-        let mut repo = FileSystemRepository::default();
-        // The icon is valid, so the plugin should be published successfully
-        let icon = std::fs::read("test_assets/icon.png").unwrap();
-        let name = names::Generator::with_naming(names::Name::Numbered)
-            .next()
-            .unwrap();
-        let new_plugin = repo
-            .publish(NewVoltInfo {
-                name: name.clone(),
-                display_name: format!("Test plugin {name}"),
-                description: "Dummy plugin".into(),
-                author: "tests".into(),
-                publisher_id: user.id,
-                icon: Some(icon),
-            })
-            .await.unwrap();
-        // Make some sanity checks before assuming the code is OK
-        assert_eq!(new_plugin.name, name);
-        assert_eq!(new_plugin.display_name, format!("Test plugin {name}"));
-        assert_eq!(new_plugin.description, "Dummy plugin");
-        assert_eq!(new_plugin.author, "tests");
-        assert_eq!(new_plugin.publisher_id, user.id);
     }
 }
