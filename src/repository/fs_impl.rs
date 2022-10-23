@@ -28,7 +28,7 @@ impl FileSystemRepository {
     pub fn base_path(&self) -> PathBuf {
         self.base_path.clone()
     }
-    pub fn remove_version(&self, plugin_name: String, version: String) -> std::io::Result<()> {
+    fn remove_version(&self, plugin_name: String, version: String) -> std::io::Result<()> {
         let mut path = self.base_path();
         path.push("versions/");
         path.push(format!("{}-{}", &plugin_name, &version));
@@ -250,6 +250,8 @@ impl Repository for FileSystemRepository {
                 self.remove_version(plugin_name.clone(), version.version.clone())
                     .unwrap();
             }
+            db_client.version().delete_many(vec![prisma::version::plugin_name::equals(plugin.name.clone())]).exec().await.unwrap();
+            db_client.plugin().delete(prisma::plugin::name::equals(plugin.name.clone())).exec().await.unwrap();
             Ok(())
         } else {
             Err(UnpublishPluginError::NonExistent)

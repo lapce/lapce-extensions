@@ -4,6 +4,7 @@ use crate::repository::FileSystemRepository;
 use crate::repository::GetResourceError;
 use crate::repository::PublishError;
 use crate::repository::Repository;
+use crate::repository::UnpublishPluginError;
 use crate::repository::YankVersionError;
 use crate::repository::{CreateVersionError, NewPluginVersion, NewVoltInfo};
 use rocket::tokio;
@@ -346,4 +347,23 @@ async fn try_yanking_twice(){
     .unwrap();
     repo.yank_version(plugin.name.clone(), "0.1.0".into()).await.unwrap();
     assert_eq!(repo.yank_version(plugin.name.clone(), "0.1.0".into()).await.unwrap_err(), YankVersionError::NonExistentOrAlreadyYanked);
+}
+
+#[tokio::test]
+async fn unpublish_plugin(){
+    let db = db().await;
+    let user = create_test_user(&db).await;
+    let mut repo = FileSystemRepository::default();
+    let plugin = create_test_plugin(&mut repo, &user).await;
+    repo.unpublish_plugin(plugin.name.clone()).await.unwrap();
+    assert!(matches!(repo.get_plugin(plugin.name.clone()).await.unwrap_err(), GetResourceError::NotFound));
+}
+#[tokio::test]
+async fn unpublish_plugin_twice(){
+    let db = db().await;
+    let user = create_test_user(&db).await;
+    let mut repo = FileSystemRepository::default();
+    let plugin = create_test_plugin(&mut repo, &user).await;
+    repo.unpublish_plugin(plugin.name.clone()).await.unwrap();
+    assert!(matches!(repo.unpublish_plugin(plugin.name.clone()).await.unwrap_err(), UnpublishPluginError::NonExistent));
 }
