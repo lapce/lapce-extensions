@@ -175,10 +175,11 @@ pub trait Repository {
         if let Some(icon) = &volt_info.icon {
             self.save_icon(volt_info.name.clone(), icon).await?;
         }
+        let publisher = db_client.user().find_unique(prisma::user::id::equals(volt_info.publisher_id)).exec().await.unwrap().unwrap();
         db_client
             .plugin()
             .create(
-                volt_info.name.clone(),
+                format!("{}.{}", publisher.username, volt_info.name),
                 volt_info.description.clone(),
                 volt_info.display_name.clone(),
                 volt_info.author.clone(),

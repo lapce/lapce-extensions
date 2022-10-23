@@ -90,8 +90,8 @@ async fn publish_plugin_with_valid_icon() {
         .await
         .unwrap();
     // Make some sanity checks before assuming the code is OK
-    assert_eq!(new_plugin.name, name);
-    assert_eq!(new_plugin.display_name, format!("Test plugin {}", name));
+    assert_eq!(new_plugin.name, format!("tests.{name}"));
+    assert_eq!(new_plugin.display_name, format!("Test plugin {name}"));
     assert_eq!(new_plugin.description, "Dummy plugin");
     assert_eq!(new_plugin.author, "tests");
     assert_eq!(new_plugin.publisher_id, user.id);
