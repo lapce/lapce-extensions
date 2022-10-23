@@ -16,12 +16,11 @@ pub struct NewVoltInfo {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(crate = "rocket::serde")]
 pub struct NewPluginVersion {
-    /// This contains all the bytes of the wasm file containing the code
-    pub wasm_file: Option<Blob>,
     /// The new version, must be greater than existing versions
     pub version: String,
-    /// Contains all the theme toml files, they're simple text, so we represent as a array of strings
-    pub themes: Vec<String>,
+    /// tar gz file of this version
+    pub tar: Blob,
+
     /// Tells if this version a pre-release or not
     pub preview: bool,
 }
@@ -94,6 +93,11 @@ pub enum GetResourceError {
 }
 #[async_trait]
 pub trait Repository {
+    async fn get_plugin_version_tar(
+        &mut self,
+        name: String,
+        version: String,
+    ) -> Result<Vec<u8>, GetResourceError>;
     async fn get_plugin_version(
         &mut self,
         name: String,
@@ -136,16 +140,6 @@ pub trait Repository {
             Err(_) => Err(GetResourceError::DatabaseError),
         }
     }
-    async fn get_plugin_version_wasm(
-        &mut self,
-        name: String,
-        version: String,
-    ) -> Result<Vec<u8>, GetResourceError>;
-    async fn get_plugin_version_themes(
-        &mut self,
-        name: String,
-        version: String,
-    ) -> Result<Vec<String>, GetResourceError>;
     async fn get_plugin_icon(&mut self, name: String) -> Result<Vec<u8>, GetResourceError>;
     /// Creates a new plugin, plugins are containers that store versions
     /// and versions store the actual plugin data, like the code and themes

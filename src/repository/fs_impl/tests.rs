@@ -109,9 +109,8 @@ async fn publish_version_with_valid_semver() {
         plugin.name,
         NewPluginVersion {
             preview: false,
-            themes: vec![],
+            tar: vec![],
             version: "0.1.0".into(),
-            wasm_file: None,
         },
     )
     .await
@@ -129,9 +128,8 @@ async fn try_publish_version_with_invalid_semver() {
             plugin.name,
             NewPluginVersion {
                 preview: false,
-                themes: vec![],
                 version: "invalid version".into(),
-                wasm_file: None,
+                tar: vec![]
             }
         )
         .await
@@ -150,9 +148,8 @@ async fn try_republish_version() {
         plugin.name.clone(),
         NewPluginVersion {
             preview: false,
-            themes: vec![],
+            tar: vec![],
             version: "0.2.0".into(),
-            wasm_file: None,
         },
     )
     .await
@@ -162,9 +159,8 @@ async fn try_republish_version() {
             plugin.name,
             NewPluginVersion {
                 preview: false,
-                themes: vec![],
+                tar: vec![],
                 version: "0.2.0".into(),
-                wasm_file: None,
             }
         )
         .await
@@ -183,9 +179,8 @@ async fn try_publish_yanked_version() {
         plugin.name.clone(),
         NewPluginVersion {
             preview: false,
-            themes: vec![],
+            tar: vec![],
             version: "0.1.0".into(),
-            wasm_file: None,
         },
     )
     .await
@@ -196,9 +191,8 @@ async fn try_publish_yanked_version() {
             plugin.name,
             NewPluginVersion {
                 preview: false,
-                themes: vec![],
+                tar: vec![],
                 version: "0.1.0".into(),
-                wasm_file: None,
             }
         )
         .await
@@ -216,9 +210,8 @@ async fn try_publish_version_older_version_than_latest() {
         plugin.name.clone(),
         NewPluginVersion {
             preview: false,
-            themes: vec![],
+            tar: vec![],
             version: "0.2.0".into(),
-            wasm_file: None,
         },
     )
     .await
@@ -228,9 +221,8 @@ async fn try_publish_version_older_version_than_latest() {
             plugin.name,
             NewPluginVersion {
                 preview: false,
-                themes: vec![],
+                tar: vec![],
                 version: "0.1.0".into(),
-                wasm_file: None,
             }
         )
         .await
@@ -247,9 +239,8 @@ async fn try_publish_version_with_invalid_plugin_name() {
             "odfbojubforg ogjub3ho5bh 5go".into(),
             NewPluginVersion {
                 preview: false,
-                themes: vec![],
+                tar: vec![],
                 version: "0.1.0".into(),
-                wasm_file: None,
             }
         )
         .await
@@ -264,44 +255,27 @@ async fn publish_version_with_themes_and_wasm() {
     let user = create_test_user(&db).await;
     let mut repo = FileSystemRepository::default();
     let plugin = create_test_plugin(&mut repo, &user).await;
-    let expected_themes = vec![std::fs::read_to_string("test_assets/darkest.toml").unwrap()];
-    let expected_wasm = std::fs::read("test_assets/lapce-rust.wasm").unwrap();
+    let expected_tar = std::fs::read("test_assets/plugin.tar.gz").unwrap();
+    
     repo.create_version(
         plugin.name.clone(),
         NewPluginVersion {
             preview: false,
-            themes: expected_themes.clone(),
+            tar: expected_tar.clone(),
             version: "0.1.0".into(),
-            wasm_file: Some(expected_wasm.clone()),
         },
     )
     .await
     .unwrap();
-    let themes = repo
-        .get_plugin_version_themes(plugin.name.clone(), "0.1.0".into())
-        .await
-        .unwrap();
-    assert_eq!(expected_themes, themes);
-    assert_eq!(
-        std::fs::read_to_string(format!(
-            "fs-registry/versions/{}-0.1.0/themes/0.toml",
-            plugin.name
-        ))
-        .unwrap(),
-        expected_themes[0]
-    );
-    let wasm = repo
-        .get_plugin_version_wasm(plugin.name.clone(), "0.1.0".into())
-        .await
-        .unwrap();
-    assert_eq!(expected_wasm, wasm);
+    
+    assert_eq!(expected_tar, repo.get_plugin_version_tar(plugin.name.clone(), "0.1.0".into()).await.unwrap());
     assert_eq!(
         std::fs::read(format!(
-            "fs-registry/versions/{}-0.1.0/plugin.wasm",
+            "fs-registry/versions/{}-0.1.0.tar.gz",
             plugin.name
         ))
         .unwrap(),
-        expected_wasm
+        expected_tar
     );
 }
 #[tokio::test]
@@ -314,9 +288,8 @@ async fn get_yanked_version(){
         plugin.name.clone(),
         NewPluginVersion {
             preview: false,
-            themes: vec![],
+            tar: vec![],
             version: "0.1.0".into(),
-            wasm_file: None,
         },
     )
     .await
@@ -335,9 +308,8 @@ async fn try_yanking_twice(){
         plugin.name.clone(),
         NewPluginVersion {
             preview: false,
-            themes: vec![],
+            tar: vec![],
             version: "0.1.0".into(),
-            wasm_file: None,
         },
     )
     .await

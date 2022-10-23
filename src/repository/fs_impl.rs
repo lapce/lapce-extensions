@@ -31,27 +31,19 @@ impl FileSystemRepository {
     fn version_path<P: AsRef<str> + Display, V: AsRef<str> + Display>(&self, plugin_name: P, version: V) -> PathBuf {
         let mut base_dir = self.base_path();
         base_dir.push("versions");
-        base_dir.push(format!("{}-{}", plugin_name, version));
-        base_dir
-    }
-    fn version_themes_path<P: AsRef<str> + Display, V: AsRef<str> + Display>(&self, plugin_name: P, version: V) -> PathBuf {
-        let mut base_dir = self.version_path(&plugin_name, &version);
-        base_dir.push("themes");
-        base_dir
-    }
-    fn version_plugin_wasm_path<P: AsRef<str> + Display, V: AsRef<str> + Display>(&self, plugin_name: P, version: V) -> PathBuf {
-        let mut base_dir = self.version_path(&plugin_name, &version);
-        base_dir.push("plugin.wasm");
+        std::fs::create_dir_all(&base_dir).unwrap();
+        base_dir.push(format!("{}-{}.tar.gz", plugin_name, version));
         base_dir
     }
     fn icons_path(&self) -> PathBuf {
         let mut base_dir = self.base_path();
         base_dir.push("icons");
+        std::fs::create_dir_all(&base_dir).unwrap();
         base_dir
     }
     fn remove_version(&self, plugin_name: String, version: String) -> std::io::Result<()> {
         let mut path = self.base_path();
-        path.push("versions/");
+        path.push("versions");
         path.push(format!("{}-{}", &plugin_name, &version));
         std::fs::remove_dir_all(path)?;
         Ok(())
@@ -59,47 +51,16 @@ impl FileSystemRepository {
 }
 #[async_trait]
 impl Repository for FileSystemRepository {
-    async fn get_plugin_version_wasm(
+    async fn get_plugin_version_tar(
         &mut self,
         name: String,
         version: String,
     ) -> Result<Vec<u8>, GetResourceError> {
-        {
-            let version = self
-                .get_plugin_version(name.clone(), version.clone())
-                .await?;
-            if version.yanked {
-                return Err(GetResourceError::NotFound);
-            }
-        }
-        let path = self.version_plugin_wasm_path(&name, &version);
+        let path = self.version_path(name, version);
         if path.try_exists().map_err(|_| GetResourceError::IoError)? {
             std::fs::read(path).map_err(|_| GetResourceError::IoError)
         } else {
             Err(GetResourceError::NotFound)
-        }
-    }
-    async fn get_plugin_version_themes(
-        &mut self,
-        name: String,
-        version: String,
-    ) -> Result<Vec<String>, GetResourceError> {
-        let version = self
-            .get_plugin_version(name.clone(), version.clone())
-            .await?;
-        if version.yanked {
-            Err(GetResourceError::NotFound)
-        } else {
-            let base_dir = self.version_themes_path(&name, &version.version);
-            let mut themes = vec![];
-            for files in std::fs::read_dir(base_dir).unwrap() {
-                let files = files.unwrap();
-                if files.file_type().unwrap().is_file() {
-                    let path = files.path();
-                    themes.push(std::fs::read_to_string(path).unwrap());
-                }
-            }
-            Ok(themes)
         }
     }
     async fn get_plugin_icon(&mut self, name: String) -> Result<Vec<u8>, GetResourceError> {
@@ -159,20 +120,9 @@ impl Repository for FileSystemRepository {
                     }
                 }
                 
-                let digest = digest_version(&version.version, &plugin.name, &version.themes, &version.wasm_file);
-                let base_dir = self.version_path(&plugin.name, &version.version);
-                std::fs::create_dir_all(base_dir.clone()).unwrap();
-                if let Some(wasm_file) = &version.wasm_file {
-                    let file = self.version_plugin_wasm_path(&plugin.name, &version.version);
-                    std::fs::write(file, wasm_file.clone()).unwrap();
-                }
-                let themes_folder = self.version_themes_path(&plugin.name, &version.version);
-                std::fs::create_dir_all(themes_folder.clone()).unwrap();
-                for (i, t) in version.themes.clone().iter().enumerate() {
-                    let mut file = themes_folder.clone();
-                    file.push(format!("{}.toml", i));
-                    std::fs::write(file, t).unwrap();
-                }
+                let digest = digest_version(&version.version, &plugin.name, &version.tar);
+                let version_tar_path = self.version_path(&plugin.name, &version.version);
+                std::fs::write(version_tar_path, &version.tar).unwrap();
                 db_client
                     .version()
                     .create(
@@ -258,14 +208,9 @@ impl Repository for FileSystemRepository {
         }
     }
 }
-fn digest_version(version: &str, plugin_name: &str, themes: &[String], wasm: &Option<Vec<u8>>) -> String {
+fn digest_version(version: &str, plugin_name: &str, tar: &[u8]) -> String {
     let mut hasher = Sha1::new();
-    if let Some(wasm_file) = wasm {
-        hasher.update(wasm_file);
-    }
-    for theme in themes {
-        hasher.update(theme.as_bytes());
-    }
+    hasher.update(tar);
     hasher.update(version.as_bytes());
     hasher.update(plugin_name.as_bytes());
     hex::encode(hasher.finalize())
