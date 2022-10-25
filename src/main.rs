@@ -61,5 +61,6 @@ fn rocket() -> _ {
             ))
         }))
         .attach(store.fairing())
+        .mount("/docs", FileServer::from("docs").rank(15))
         .mount("/", FileServer::from("marketplace/dist"))
 }
