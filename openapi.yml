@@ -5,6 +5,9 @@ servers:
   - description: Production
     url: https://lapce-extensions.herokuapp.com/api/v1
 info:
+  x-logo:
+    url: "https://avatars.githubusercontent.com/u/43668847?s=200&v=4"
+    altText: Lapce Logo
   title: Lapce Registry API
   description: |
     This is the documentation of the Lapce Registry API
