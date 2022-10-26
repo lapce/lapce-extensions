@@ -132,6 +132,8 @@ pub trait Repository {
         let plugin_result = db_client
             .plugin()
             .find_unique(prisma::plugin::name::equals(name))
+            .with(prisma::plugin::versions::fetch(vec![]))
+            .with(prisma::plugin::publisher::fetch())
             .exec()
             .await;
         match plugin_result {
@@ -151,9 +153,11 @@ pub trait Repository {
             eprintln!("Failed to connect to the database: {:#?}", e);
             PublishError::DatabaseError
         })?;
+        let publisher = db_client.user().find_unique(prisma::user::id::equals(volt_info.publisher_id)).exec().await.unwrap().unwrap();
+        let name = format!("{}.{}", publisher.username, volt_info.name);
         let plugin = db_client
             .plugin()
-            .find_unique(prisma::plugin::name::equals(volt_info.name.clone()))
+            .find_unique(prisma::plugin::name::equals(name.clone()))
             .exec()
             .await
             .map_err(|e| {
@@ -166,18 +170,19 @@ pub trait Repository {
         }
         // Cloning is not cheap, so we get a reference instead
         if let Some(icon) = &volt_info.icon {
-            self.save_icon(volt_info.name.clone(), icon).await?;
+            self.save_icon(name.clone(), icon).await?;
         }
-        let publisher = db_client.user().find_unique(prisma::user::id::equals(volt_info.publisher_id)).exec().await.unwrap().unwrap();
         db_client
             .plugin()
             .create(
-                format!("{}.{}", publisher.username, volt_info.name),
+                name,
                 volt_info.description.clone(),
                 volt_info.display_name.clone(),
                 prisma::user::id::equals(volt_info.publisher_id),
                 vec![],
             )
+            .with(prisma::plugin::versions::fetch(vec![]))
+            .with(prisma::plugin::publisher::fetch())
             .exec()
             .await
             .map_err(|e| {

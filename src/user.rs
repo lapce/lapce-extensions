@@ -1,3 +1,4 @@
+use crate::db::prisma::plugin;
 use crate::db::{connect, prisma::user};
 use crate::error::*;
 use crate::Session;
@@ -14,6 +15,7 @@ pub async fn get_user(session: Session<'_>) -> Result<Json<user::Data>, Unauthor
                     let user = client
                         .user()
                         .find_unique(user::id::equals(session.id as i64))
+                        .with(user::plugins::fetch(vec![]).with(plugin::versions::fetch(vec![])))
                         .exec()
                         .await
                         .ok();

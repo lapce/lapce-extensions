@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 servers: 
   - description: Local server
     url: http://localhost:8000/api/v1
@@ -242,7 +242,7 @@ paths:
       tags: [repository, plugin]
       responses:
         "404":
-          description: The plugin or the icon don't exist
+          description: The plugin doesn't exist
         "200":
           description: Got the icon successfully
           content:

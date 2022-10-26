@@ -25,6 +25,7 @@ sha1 = "0.10.5"
 hex = "0.4.3"
 # image = "0.24.4"
 imagesize = "0.10"
+names = "0.14"
 [dependencies.serde]
 version = "1.0.144"
 features = ["derive"]
@@ -35,6 +36,3 @@ members = ["prisma_cli"]
 default-members = ["prisma_cli", "."]
 [profile.bench]
 debug = true
-
-[dev-dependencies]
-names = "0.14"

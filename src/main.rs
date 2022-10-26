@@ -43,7 +43,16 @@ fn rocket() -> _ {
         .mount("/", routes![github::callback, github::login])
         .mount(
             "/api/v1",
-            routes![user::get_user, user::logout, github::login_with_token],
+            routes![
+                user::get_user,
+                user::logout,
+                github::login_with_token,
+                repository::routes::create_plugin,
+                repository::routes::change_plugin_icon,
+                repository::routes::get_plugin_icon,
+                repository::routes::get_plugin_info,
+                repository::routes::delete_plugin,
+            ],
         )
         .attach(AdHoc::on_ignite("GitHub OAuth Config", |rocket| async {
             let config = OAuthConfig::new(
