@@ -1,51 +1,51 @@
-
+use crate::db::prisma::plugin;
+use crate::db::{connect, prisma::user};
+use crate::error::*;
+use crate::Session;
 use rocket::response::status::Unauthorized;
 use rocket::serde::json::Json;
-use crate::Session;
-use crate::db::{establish_connection, prisma::user};
-use crate::error::*;
 
 #[get("/user")]
-pub async fn get_user(session: Session<'_>) -> Result<Json<user::Data>, Unauthorized<Json<Error>>>{
+pub async fn get_user(session: Session<'_>) -> Result<Json<user::Data>, Unauthorized<Json<Error>>> {
     match session.get().await {
         Ok(Some(session)) => {
-            let client = establish_connection().await;
+            let client = connect().await;
             match client {
                 Ok(client) => {
-                    let user = client.user().find_unique(user::id::equals(session.id as i64)).exec().await.ok();
+                    let user = client
+                        .user()
+                        .find_unique(user::id::equals(session.id as i64))
+                        .with(user::plugins::fetch(vec![]).with(plugin::versions::fetch(vec![])))
+                        .exec()
+                        .await
+                        .ok();
                     if let Some(Some(user)) = user {
-                        Ok(Json(user))   
+                        Ok(Json(user))
                     } else {
                         Err(Unauthorized(Some(Json(Error {
                             kind: ErrorKind::NotLoggedIn,
                             action: "Send a `token` cookie.".into(),
-                            message: "Unauthorized".into()
+                            message: "Unauthorized".into(),
                         }))))
                     }
                 }
-                Err(err) => {
-                    Err(Unauthorized(Some(Json(err))))
-                }
+                Err(err) => Err(Unauthorized(Some(Json(err)))),
             }
         }
-        _ => {
-            Err(Unauthorized(Some(Json(Error {
-                kind: ErrorKind::NotLoggedIn,
-                action: "Send a `token` cookie.".into(),
-                message: "Unauthorized".into()
-            }))))
-        }
+        _ => Err(Unauthorized(Some(Json(Error {
+            kind: ErrorKind::NotLoggedIn,
+            action: "Send a `token` cookie.".into(),
+            message: "Unauthorized".into(),
+        })))),
     }
-    
-    
 }
-#[delete("/session")] 
+#[delete("/session")]
 pub async fn logout(session: Session<'_>) -> Result<(), Unauthorized<Json<Error>>> {
-    if let None = session.get().await.unwrap(){
+    if session.get().await.unwrap().is_none() {
         Err(Unauthorized(Some(Json(Error {
             kind: ErrorKind::NotLoggedIn,
             action: "Send a `token` cookie.".into(),
-            message: "You're already logged out".into()
+            message: "You're already logged out".into(),
         }))))
     } else {
         session.remove().await.unwrap();

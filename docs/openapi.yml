@@ -1,0 +1,400 @@
+openapi: 3.1.0
+servers: 
+  - description: Local server
+    url: http://localhost:8000/api/v1
+  - description: Production
+    url: https://lapce-extensions.herokuapp.com/api/v1
+info:
+  x-logo:
+    url: "https://avatars.githubusercontent.com/u/43668847?s=200&v=4"
+    altText: Lapce Logo
+  title: Lapce Registry API
+  description: |
+    This is the documentation of the Lapce Registry API
+    
+    This API allows you to publish, unpublish, update plugins on the Lapce's plugins registry.
+    
+    If you want to contribute to the documentation, api or registry, don't be afraid to [open a pull request](https://github.com/lapce/lapce-extensions)
+  version: v1
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+x-tagGroups:
+  - name: Routes
+    tags:
+      - plugin
+      - version
+      - repository
+      - user
+      - login
+  - name: Models
+    tags:
+      - plugin_model
+      - version_model
+      - user_model
+tags: 
+  - name: plugin_model
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/User" />
+    x-displayName: User
+  - name: plugin_model
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/Plugin" />
+    x-displayName: Plugin
+  - name: plugin
+    description: Plugin related operations
+    x-displayName: Plugin
+  - name: version
+    description: Publish, download and manage plugin versions
+    x-displayName: Version
+  - name: user_model
+    x-displayName: User
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/User" />
+  - name: version_model
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/Version" />
+    x-displayName: Version
+  - name: repository
+    x-displayName: Repository
+    description: Publish, get, update and modify plugins
+  - name: user
+    x-displayName: User
+    description: Get user
+  - name: login
+    x-displayName: Login/Session
+    description: Login and logout routes
+components:
+  schemas:
+    User:
+      description: An user object
+      type: object
+      properties:
+        plugins:
+          type: array
+          items:
+            $ref: "#/components/schemas/Plugin"
+        name:
+          type: string
+          example: "Tiago Dinis"
+        username:
+          type: string
+          example: "coffee-is-power"
+        avatar_url:
+          type: string
+          example: "https://avatars.githubusercontent.com/u/92828847?v=4"
+        id:
+          type: integer
+          example: 92828847
+    Version:
+      description: |
+        Represents a plugin version, the versions follow the semver specification. Check https://semver.org for more information.
+      type: object
+      properties:
+        version:
+          type: string
+          example: 0.1.0
+        preview:
+          type: boolean
+          example: false
+    Plugin:
+      description: |
+        Represents a plugin, which may contain some versions.
+      type: object
+      properties:
+        name:
+          type: string
+          example: lapce-rust
+        display_name:
+          type: string
+          example: Rust
+        versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Version"
+        publisher:
+          $ref: "#/components/schemas/User"
+        publisher_id:
+          type: integer
+          example: 92828847
+  securitySchemes:
+    token:
+      type: apiKey
+      in: cookie
+      name: token
+paths:
+  /session:
+    delete:
+      summary: Log out
+      description: Logs out
+      tags: [login]
+      security:
+        - token: []
+      responses:
+        "401":
+          description: You're not logged in
+        "200":
+          description: The token was invalidated
+  /session/{github_token}:
+    post:
+      summary: Log In
+      description: Logs in with the specified github token
+      tags: [login]
+      parameters: 
+        - name: github_token
+          in: path
+          required: true
+          description:  Github Token
+          schema:
+            type: string
+      responses:
+        "500":
+          description: The token is invalid
+        "200":
+          description: The token is valid and a cookie `token` was set
+  /user:
+    get:
+      summary: Get user
+      description: Get the logged in user
+      tags: [user]
+      security:
+        - token: []
+      responses:
+        "401":
+          description: You're not logged in
+        "200":
+          description: The user was returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+  /volts/{name}/icon:
+    patch:
+      summary: Set plugin icon
+      description: Changes a plugin's icon
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '404':
+          description: Plugin not found
+        '401':
+          description: Not authenticated
+        "200":
+          description: The icon was changed successfully
+      parameters: 
+        - name: name
+          required: true
+          schema: 
+            type: string
+          in: path
+      tags: [repository, plugin]
+      security: 
+        - token: []
+  /volts:
+    get:
+      summary: List plugins
+      description: Get a page of the plugin registry, ordered by a specified strategy
+      tags: [repository]
+      parameters: 
+        - in: query
+          name: strategy
+          required: false
+          description: Ordering strategy
+          schema:
+            type: string
+            enum: [new, best]
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+      responses:
+        "400":
+          description: The page or/and the strategy are invalid
+        "200":
+          description: The plugins were listed successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Plugin"
+  /volts/{publisher}.{name}/:
+    get:
+      description: Returns metadata about the plugin
+      summary: Get plugin info
+      parameters:
+        - name: publisher
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      tags: [repository, plugin]
+      responses:
+        "404":
+          description: The plugin doesn't exist
+        "200":
+          description: Got the icon successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plugin"
+  /volts/{publisher}.{name}/icon:
+    get:
+      summary: Get plugin icon
+      description: Returns the plugin's icon
+      parameters:
+        - name: publisher
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      tags: [repository, plugin]
+      responses:
+        "404":
+          description: The plugin or the icon don't exist
+        "200":
+          description: Got the icon successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+  /volts/{name}/{version}:
+    delete:
+      description: Yanks a version
+      responses:
+        "404":
+          description: The version doesn't exist, or was already yanked
+        '401':
+          description: Not authenticated
+        "200":
+          description: The version was yanked successfully
+      parameters: 
+        - name: name
+          required: true
+          schema: 
+            type: string
+          in: path
+        - name: version
+          required: true
+          schema: 
+            type: string
+          in: path
+      tags: [repository, version]
+      security: 
+        - token: []
+    post:
+      description: Creates a new version
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                preview:
+                  type: boolean
+                tarfile:
+                  type: string
+                  format: binary
+      responses:
+        "400":
+          description: The version is invalid
+        "404":
+          description: The plugin doesn't exist
+        "409":
+          description: There's a version greater or equal
+        '401':
+          description: Not authenticated
+        "201":
+          description: The version was published successfully
+      parameters: 
+        - name: name
+          required: true
+          schema: 
+            type: string
+          in: path
+        - name: version
+          required: true
+          schema: 
+            type: string
+          in: path
+      tags: [repository, version]
+      security: 
+        - token: []
+  /volts/{name}:
+    delete:
+      summary: Unpublish plugin
+      description: Unpublishes a plugin, deleting all versions
+      parameters: 
+        - name: name
+          required: true
+          schema: 
+            type: string
+          in: path
+      tags: [repository, plugin]
+      security: 
+        - token: []
+      responses:
+        "404":
+          description: That plugin doesn't exist
+        '401':
+          description: Not authenticated
+        "204":
+          description: The plugin was unpublished successfully
+    post:
+      summary: Publish plugin
+      description: Creates a new - empty - plugin
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                description:
+                  type: string
+                icon:
+                  nullable: true
+                  type: string
+                  format: binary
+      responses:
+        "400":
+          description: The request is invalid
+        "409":
+          description: You already have a plugin with the same name
+        '401':
+          description: Not authenticated
+        "201":
+          description: The volt was created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plugin"
+      parameters: 
+        - name: name
+          required: true
+          schema:
+            type: string
+          in: path
+      tags: [repository, plugin]
+      security: 
+        - token: []
