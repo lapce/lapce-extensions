@@ -47,6 +47,10 @@ tags:
   - name: version
     description: Publish, download and manage plugin versions
     x-displayName: Version
+  - name: user_model
+    x-displayName: User
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/User" />
   - name: version_model
     description: |
       <SchemaDefinition schemaRef="#/components/schemas/Version" />
@@ -104,6 +108,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Version"
+        publisher:
+          $ref: "#/components/schemas/User"
         publisher_id:
           type: integer
           example: 92828847
