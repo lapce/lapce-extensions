@@ -70,6 +70,10 @@ components:
       description: An user object
       type: object
       properties:
+        plugins:
+          type: array
+          items:
+            $ref: "#/components/schemas/Plugin"
         name:
           type: string
           example: "Tiago Dinis"
@@ -381,6 +385,10 @@ paths:
           description: Not authenticated
         "201":
           description: The volt was created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plugin"
       parameters: 
         - name: name
           required: true
