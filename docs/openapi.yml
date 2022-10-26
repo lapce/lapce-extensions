@@ -19,13 +19,47 @@ info:
   license:
     name: MIT License
     url: https://opensource.org/licenses/MIT
+x-tagGroups:
+  - name: Routes
+    tags:
+      - plugin
+      - version
+      - repository
+      - user
+      - login
+  - name: Models
+    tags:
+      - plugin_model
+      - version_model
+      - user_model
 tags: 
+  - name: plugin_model
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/User" />
+    x-displayName: User
+  - name: plugin_model
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/Plugin" />
+    x-displayName: Plugin
+  - name: plugin
+    description: Plugin related operations
+    x-displayName: Plugin
+  - name: version
+    description: Publish, download and manage plugin versions
+    x-displayName: Version
+  - name: version_model
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/Version" />
+    x-displayName: Version
   - name: repository
+    x-displayName: Repository
     description: Publish, get, update and modify plugins
   - name: user
+    x-displayName: User
     description: Get user
   - name: login
-    description: Login
+    x-displayName: Login/Session
+    description: Login and logout routes
 components:
   schemas:
     User:
@@ -81,6 +115,7 @@ components:
 paths:
   /session:
     delete:
+      summary: Log out
       description: Logs out
       tags: [login]
       security:
@@ -92,6 +127,7 @@ paths:
           description: The token was invalidated
   /session/{github_token}:
     post:
+      summary: Log In
       description: Logs in with the specified github token
       tags: [login]
       parameters: 
@@ -108,6 +144,7 @@ paths:
           description: The token is valid and a cookie `token` was set
   /user:
     get:
+      summary: Get user
       description: Get the logged in user
       tags: [user]
       security:
@@ -123,6 +160,7 @@ paths:
                 $ref: "#/components/schemas/User"
   /volts/{name}/icon:
     patch:
+      summary: Set plugin icon
       description: Changes a plugin's icon
       requestBody:
         required: true
@@ -144,11 +182,12 @@ paths:
           schema: 
             type: string
           in: path
-      tags: [repository]
+      tags: [repository, plugin]
       security: 
         - token: []
   /volts:
     get:
+      summary: List plugins
       description: Get a page of the plugin registry, ordered by a specified strategy
       tags: [repository]
       parameters: 
@@ -177,7 +216,8 @@ paths:
                   $ref: "#/components/schemas/Plugin"
   /volts/{publisher}.{name}/:
     get:
-      description: Get the plugin info
+      description: Returns metadata about the plugin
+      summary: Get plugin info
       parameters:
         - name: publisher
           in: path
@@ -189,7 +229,7 @@ paths:
           required: true
           schema:
             type: string
-      tags: [repository]
+      tags: [repository, plugin]
       responses:
         "404":
           description: The plugin or the icon don't exist
@@ -201,7 +241,8 @@ paths:
                 $ref: "#/components/schemas/Plugin"
   /volts/{publisher}.{name}/icon:
     get:
-      description: Get the plugin's icon
+      summary: Get plugin icon
+      description: Returns the plugin's icon
       parameters:
         - name: publisher
           in: path
@@ -213,7 +254,7 @@ paths:
           required: true
           schema:
             type: string
-      tags: [repository]
+      tags: [repository, plugin]
       responses:
         "404":
           description: The plugin or the icon don't exist
@@ -245,7 +286,7 @@ paths:
           schema: 
             type: string
           in: path
-      tags: [repository]
+      tags: [repository, version]
       security: 
         - token: []
     post:
@@ -263,6 +304,8 @@ paths:
                   type: string
                   format: binary
       responses:
+        "400":
+          description: The version is invalid
         "404":
           description: The plugin doesn't exist
         "409":
@@ -282,11 +325,12 @@ paths:
           schema: 
             type: string
           in: path
-      tags: [repository]
+      tags: [repository, version]
       security: 
         - token: []
   /volts/{name}:
     delete:
+      summary: Unpublish plugin
       description: Unpublishes a plugin, deleting all versions
       parameters: 
         - name: name
@@ -294,7 +338,7 @@ paths:
           schema: 
             type: string
           in: path
-      tags: [repository]
+      tags: [repository, plugin]
       security: 
         - token: []
       responses:
@@ -305,6 +349,7 @@ paths:
         "204":
           description: The plugin was unpublished successfully
     post:
+      summary: Publish plugin
       description: Creates a new - empty - plugin
       requestBody:
         required: true
@@ -322,6 +367,8 @@ paths:
                   type: string
                   format: binary
       responses:
+        "400":
+          description: The request is invalid
         "409":
           description: You already have a plugin with the same name
         '401':
@@ -334,6 +381,6 @@ paths:
           schema:
             type: string
           in: path
-      tags: [repository]
+      tags: [repository, plugin]
       security: 
         - token: []
